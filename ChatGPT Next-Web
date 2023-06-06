@@ -1,0 +1,6 @@
+docker run -d -p 3000:3000 \
+  --name=chatgpt-next-web \
+   -e OPENAI_API_KEY="sk-xxxx" \
+   -e CODE="your-password" \
+  --restart=always \   
+   yidadaa/chatgpt-next-web
