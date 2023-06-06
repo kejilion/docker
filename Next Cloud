@@ -1,0 +1,8 @@
+docker run -d \
+  --name nextcloud \
+  --restart=always \
+  -p 8080:80 \
+  -v /home/nextcloud:/var/www/html \
+  -e NEXTCLOUD_ADMIN_USER=admin \
+  -e NEXTCLOUD_ADMIN_PASSWORD= \
+  nextcloud
