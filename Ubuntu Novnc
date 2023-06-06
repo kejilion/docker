@@ -1,0 +1,8 @@
+docker run -d \
+  --name ubuntu-novnc \
+  -p 6080:80 \
+  -v $PWD:/workspace:rw \
+  -e HTTP_PASSWORD=P12345 \
+  -e RESOLUTION=1280x720 \
+  --restart=always \
+  fredblgr/ubuntu-novnc:20.04
