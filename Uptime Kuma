@@ -1,0 +1,6 @@
+docker run -d \
+  --name=uptime-kuma \
+  -p 3003:3001 \
+  -v /home/uptime/uptime-kuma-data:/app/data \
+  --restart=always \
+  louislam/uptime-kuma:latest
