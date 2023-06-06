@@ -1,0 +1,8 @@
+docker run -d \
+  --name ms365 \
+  -p 1066:1066 \
+  -e TZ=Asia/Shanghai \
+  --restart=always \
+  hanhongyong/ms365-e5-renew-x:latest  
+  
+  # hanhongyong/ms365-e5-renew-x:arm
