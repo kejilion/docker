@@ -1,12 +1,12 @@
 docker run -d \
   --name web \
   -p 80:80 \
-  -p 443:443 \  
+  -p 443:443 \
   -v /home/web/nginx.conf:/etc/nginx/nginx.conf \
   -v /home/web/certs:/etc/nginx/certs \
   -v /home/web/html:/var/www/html \
   --link mysql:mysql \
-  -e 'NGINX_HOST=yuming.com' \
+  -e 'NGINX_HOST=web.kejilion.eu.org' \
   -e 'PHP_ERRORS=1' \
   -e 'PHP_DISPLAY_ERRORS=1' \
   --restart=always \
