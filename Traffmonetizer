@@ -1,0 +1,5 @@
+docker run -d \
+  --name tmd \
+  --restart=always \
+  traffmonetizer/cli start accept \
+  --token VM+OdtNp5mupfl8I2w0EZswkOJ8WSuTuMe/kDV02gS8=
