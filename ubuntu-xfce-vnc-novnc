@@ -1,0 +1,14 @@
+docker run -d --name xfce \
+  --shm-size="1gb" \
+  -p 5900:5900 \
+  -p 6081:6080 \
+  -e VNC_PASSWD=PAS3WorD \
+  -e GEOMETRY=1280x720 \
+  -e DEPTH=24 \
+  -v /home/xfce/Downloads:/root/Downloads \
+  -v /home/xfce/Documents:/root/Documents \
+  -v /home/xfce/Pictures:/root/Pictures \
+  -v /home/xfce/Videos:/root/Videos \
+  -v /home/xfce/Music:/root/Music \
+  --restart=unless-stopped \
+  imlala/ubuntu-xfce-vnc-novnc:latest
