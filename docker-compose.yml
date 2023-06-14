@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx
+    container_name: nginx
+    ports:
+      - 80:80
+      - 443:443      
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./certs:/etc/nginx/certs      
+      - ./html:/var/www/html
+    depends_on:
+      - php
+
+  php:
+    image: php:fpm
+    container_name: php
+    volumes:
+      - ./html:/var/www/html
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql
+    container_name: mysql
+    ports:
+      - 3306:3306
+    volumes:
+      - ./mysql:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=webroot
+      - MYSQL_DATABASE=web
+      - MYSQL_USER=kejilion
+      - MYSQL_PASSWORD=kejilionYYDS
