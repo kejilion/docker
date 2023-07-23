@@ -20,6 +20,13 @@ services:
     volumes:
       - ./html:/var/www/html
 
+  php74:
+    image: php:7.4.33-fpm
+    container_name: php74
+    restart: always
+    volumes:
+      - ./html:/var/www/html
+
   mysql:
     image: mysql
     container_name: mysql
