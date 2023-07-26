@@ -10,7 +10,7 @@ services:
       - "443:443"
     volumes:
       - ./conf.d:/etc/nginx/conf.d
-      - ./certs:/etc/nginx/certs      
+      - ./certs:/etc/nginx/certs
       - ./html:/var/www/html
 
   php:
