@@ -12,8 +12,6 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./certs:/etc/nginx/certs      
       - ./html:/var/www/html
-    depends_on:
-      - php
 
   php:
     image: php:fpm
@@ -21,8 +19,6 @@ services:
     restart: always
     volumes:
       - ./html:/var/www/html
-    depends_on:
-      - mysql
 
   mysql:
     image: mysql
