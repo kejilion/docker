@@ -35,7 +35,6 @@ services:
       - ./mysql:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: webroot
-      MYSQL_DATABASE: web1
       MYSQL_USER: kejilion
       MYSQL_PASSWORD: kejilionYYDS
 
