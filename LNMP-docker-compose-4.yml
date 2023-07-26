@@ -29,6 +29,8 @@ services:
 
   mysql:
     image: mysql
+    # image: arm64v8/mysql
+    # ARM使用上面的镜像 去掉井号 同时为image: mysql加上井号    
     container_name: mysql
     restart: always
     volumes:
