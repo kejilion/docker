@@ -1,0 +1,6 @@
+docker run -d \
+  --name bitwarden \
+  --restart always \
+  -p 3580:80 \
+  -v /home/docker/bitwarden/data:/data \
+  vaultwarden/server
