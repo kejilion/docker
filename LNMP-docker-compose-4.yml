@@ -12,7 +12,7 @@ services:
       - ./conf.d:/etc/nginx/conf.d
       - ./certs:/etc/nginx/certs
       - ./html:/var/www/html
-      - ./log/nginx/access.log:/var/log/nginx/access.log      
+      - ./log/nginx:/var/log/nginx    
 
   php:
     image: php:fpm
