@@ -13,6 +13,7 @@ services:
       - ./certs:/etc/nginx/certs
       - ./html:/var/www/html
       - ./log/nginx:/var/log/nginx
+    command: sh -c "sed -i '/http {/a \      limit_req_zone \$binary_remote_addr zone=example_zone:10m rate=1r/s;' /etc/nginx/nginx.conf'"
 
   php:
     image: php:fpm
