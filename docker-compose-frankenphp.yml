@@ -23,3 +23,10 @@ services:
       MYSQL_ROOT_PASSWORD: webroot
       MYSQL_USER: kejilion
       MYSQL_PASSWORD: kejilionYYDS
+
+  redis:
+    image: redis
+    container_name: redis
+    restart: always
+    volumes:
+      - ./redis:/data
