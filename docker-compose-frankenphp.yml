@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  frankenphp:
+    image: dunglas/frankenphp
+    container_name: web
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./caddy/:/etc/caddy/
+      - ./html:/app/public
+
+  mysql:
+    image: mysql
+    container_name: mysql
+    restart: always
+    volumes:
+      - ./mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: webroot
+      MYSQL_USER: kejilion
+      MYSQL_PASSWORD: kejilionYYDS
