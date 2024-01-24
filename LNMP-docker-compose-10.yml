@@ -2,8 +2,8 @@ version: '3.8'
 
 services:
   nginx:
-    image: nginx
-    container_name: nginx:alpine
+    image: nginx:alpine
+    container_name: nginx
     restart: always
     ports:
       - "80:80"
