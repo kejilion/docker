@@ -1,0 +1,19 @@
+docker run -d \
+  --name=webtop \
+  --security-opt seccomp=unconfined \
+  -e PUID=1000 \
+  -e PGID=1000 \
+  -e TZ=Etc/UTC \
+  -e SUBFOLDER=/ \
+  -e TITLE=Webtop \
+  -e LC_ALL=zh_CN.UTF-8 \
+  -e DOCKER_MODS=linuxserver/mods:universal-package-install \
+  -e INSTALL_PACKAGES=font-noto-cjk \
+  -p 3080:3000 \
+  -p 3443:3001 \
+  -v /home/docker/webtop/data:/config \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  --device /dev/dri:/dev/dri \
+  --shm-size="1gb" \
+  --restart unless-stopped \
+  lscr.io/linuxserver/webtop:latest
