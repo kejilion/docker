@@ -1,0 +1,30 @@
+docker run -d \
+  --name=fail2ban \
+  --net=host \
+  --cap-add=NET_ADMIN \
+  --cap-add=NET_RAW \
+  -e PUID=1000 \
+  -e PGID=1000 \
+  -e TZ=Etc/UTC \
+  -e VERBOSITY=-vv `#optional` \
+  -v /path/to/fail2ban/config:/config \
+  -v /var/log:/var/log:ro \
+  -v /path/to/airsonic/log:/remotelogs/airsonic:ro `#optional` \
+  -v /path/to/apache2/log:/remotelogs/apache2:ro `#optional` \
+  -v /path/to/authelia/log:/remotelogs/authelia:ro `#optional` \
+  -v /path/to/emby/log:/remotelogs/emby:ro `#optional` \
+  -v /path/to/filebrowser/log:/remotelogs/filebrowser:ro `#optional` \
+  -v /path/to/homeassistant/log:/remotelogs/homeassistant:ro `#optional` \
+  -v /path/to/lighttpd/log:/remotelogs/lighttpd:ro `#optional` \
+  -v /path/to/nextcloud/log:/remotelogs/nextcloud:ro `#optional` \
+  -v /home/web/log/nginx/:/remotelogs/nginx:ro `#optional` \
+  -v /path/to/nzbget/log:/remotelogs/nzbget:ro `#optional` \
+  -v /path/to/overseerr/log:/remotelogs/overseerr:ro `#optional` \
+  -v /path/to/prowlarr/log:/remotelogs/prowlarr:ro `#optional` \
+  -v /path/to/radarr/log:/remotelogs/radarr:ro `#optional` \
+  -v /path/to/sabnzbd/log:/remotelogs/sabnzbd:ro `#optional` \
+  -v /path/to/sonarr/log:/remotelogs/sonarr:ro `#optional` \
+  -v /path/to/unificontroller/log:/remotelogs/unificontroller:ro `#optional` \
+  -v /path/to/vaultwarden/log:/remotelogs/vaultwarden:ro `#optional` \
+  --restart unless-stopped \
+  lscr.io/linuxserver/fail2ban:latest
