@@ -1,0 +1,26 @@
+services:
+  wordpress:
+    container_name: nginx
+    restart: always
+    image: wordpress
+    ports:
+      - 9000:80
+    environment:
+      WORDPRESS_DB_HOST: database
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress_password
+    volumes:
+      - ./wordpress-data:/var/www/html
+
+  database:
+    container_name: nginx
+    restart: always
+    image: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress_password
+    volumes:
+      - ./mysql:/var/lib/mysql
