@@ -17,7 +17,7 @@ services:
 
 
   php:
-    image: wordpress:php8.3-fpm-alpine
+    image: wordpress:php-fpm-alpine
     container_name: php
     restart: always
     volumes:
