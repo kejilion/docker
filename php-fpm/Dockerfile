@@ -50,11 +50,3 @@ RUN echo "upload_max_filesize=50M" > /usr/local/etc/php/conf.d/uploads.ini && \
     echo "max_input_time=600" > /usr/local/etc/php/conf.d/max_input_time.ini && \
     echo "max_input_vars=3000" > /usr/local/etc/php/conf.d/max_input_vars.ini
 
-# 设置工作目录（可选）
-WORKDIR /var/www/html
-
-# 暴露端口（可选）
-EXPOSE 9000
-
-# 启动 PHP FPM（通常不需要在 Dockerfile 中添加）
-CMD ["php-fpm"]
