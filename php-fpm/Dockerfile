@@ -16,6 +16,16 @@ RUN apk update && \
         make \
         pkgconfig
 
+# 安装 Imagick 扩展
+RUN git clone ${GH_PROXY}https://github.com/Imagick/imagick /tmp/imagick && \
+    cd /tmp/imagick && \
+    phpize && \
+    ./configure && \
+    make && \
+    make install && \
+    echo 'extension=imagick.so' > /usr/local/etc/php/conf.d/imagick.ini && \
+    rm -rf /tmp/imagick
+
 # 下载并安装 PHP 扩展安装脚本
 RUN curl -sL ${GH_PROXY}https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions -o /usr/local/bin/install-php-extensions && \
     chmod +x /usr/local/bin/install-php-extensions
@@ -31,16 +41,6 @@ RUN /usr/local/bin/install-php-extensions \
         bcmath \
         opcache \
         redis
-
-# 安装 Imagick 扩展
-RUN git clone ${GH_PROXY}https://github.com/Imagick/imagick /tmp/imagick && \
-    cd /tmp/imagick && \
-    phpize && \
-    ./configure && \
-    make && \
-    make install && \
-    echo 'extension=imagick.so' > /usr/local/etc/php/conf.d/imagick.ini && \
-    rm -rf /tmp/imagick
 
 # 设置 PHP 配置
 RUN echo "upload_max_filesize=50M" > /usr/local/etc/php/conf.d/uploads.ini && \
