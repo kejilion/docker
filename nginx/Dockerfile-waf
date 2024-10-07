@@ -1,7 +1,7 @@
 # Use the Alpine base image for the builder stage
 FROM alpine:latest AS builder
 
-# 安装必要的依赖项，包括 linux-headers
+# Install necessary dependencies, including linux-headers
 RUN apk add --no-cache \
     pcre-dev \
     zlib-dev \
@@ -48,29 +48,40 @@ RUN git clone --depth 1 https://github.com/SpiderLabs/ModSecurity /app/ModSecuri
 # Clone the ModSecurity-nginx connector
 RUN git clone --depth 1 https://github.com/SpiderLabs/ModSecurity-nginx /app/ModSecurity-nginx
 
-# Build the dynamic modules
+
+# 下载并构建 Zstandard
+ARG ZSTD_VERSION=1.5.6
+RUN wget https://github.com/facebook/zstd/releases/download/v1.5.6/zstd-${ZSTD_VERSION}.tar.gz && \
+    tar -xzf zstd-${ZSTD_VERSION}.tar.gz && \
+    cd zstd-${ZSTD_VERSION} && \
+    make clean && \
+    CFLAGS="-fPIC" make && make install
+
+
+# Clone the Zstd module
+RUN git clone --depth=10 https://github.com/tokers/zstd-nginx-module.git /app/ngx_http_zstd_module
+
+# Build the dynamic modules including Zstd
 RUN cd nginx-${NGINX_VERSION} && \
     ./configure --with-compat \
                 --add-dynamic-module=../ngx_brotli \
-                --add-dynamic-module=../ModSecurity-nginx && \
+                --add-dynamic-module=../ModSecurity-nginx \
+                --add-dynamic-module=../ngx_http_zstd_module && \
     make modules
 
 # Use the official Nginx Alpine image for the final stage
 FROM nginx:alpine
 
 ARG NGINX_VERSION=1.27.2
-# Copy the built modules from the builder stage
-COPY --from=builder /app/nginx-${NGINX_VERSION}/objs/ngx_http_brotli_static_module.so /etc/nginx/modules/
-COPY --from=builder /app/nginx-${NGINX_VERSION}/objs/ngx_http_brotli_filter_module.so /etc/nginx/modules/
-COPY --from=builder /app/nginx-${NGINX_VERSION}/objs/ngx_http_modsecurity_module.so /etc/nginx/modules/
+COPY --from=builder /app/nginx-${NGINX_VERSION}/objs/*.so /etc/nginx/modules/
 
-# 复制 libmodsecurity 目录下的所有文件到 /usr/lib/
+# Copy libmodsecurity directory files to /usr/lib/
 COPY --from=builder /usr/local/modsecurity/lib/* /usr/lib/
 
-# 定义构建参数
+# Define build argument for Core Rule Set version
 ARG CORERULESET_VERSION="4.7.0"
 
-# 创建配置目录
+# Create configuration directory
 RUN mkdir -p /etc/nginx/modsec && \
     wget https://github.com/coreruleset/coreruleset/archive/v${CORERULESET_VERSION}.tar.gz && \
     tar -xzf v${CORERULESET_VERSION}.tar.gz --strip-components=1 -C /etc/nginx/modsec && \
