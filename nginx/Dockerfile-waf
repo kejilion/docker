@@ -92,7 +92,7 @@ RUN cp /etc/nginx/modsec/crs-setup.conf.example /etc/nginx/modsec/crs-setup.conf
 RUN wget https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/refs/heads/v3/master/modsecurity.conf-recommended -O /etc/nginx/modsec/modsecurity.conf && \
     sed -i 's/SecRuleEngine DetectionOnly/SecRuleEngine On/' /etc/nginx/modsec/modsecurity.conf && \
     sed -i 's/SecPcreMatchLimit [0-9]\+/SecPcreMatchLimit 20000/' /etc/nginx/modsec/modsecurity.conf && \
-    sed -i 's/SecPcreMatchLimitRecursion [0-9]\+/SecPcreMatchLimitRecursion 20000/' /etc/nginx/modsec/modsecurity.conf && \
+    sed -i 's/SecPcreMatchLimitRecursion [0-9]\+/SecPcreMatchLimitRecursion 20000/' /etc/nginx/modsec/modsecurity.conf
 
 RUN apk add lua5.1 lua5.1-dev pcre pcre-dev yajl yajl-dev  
 RUN ldconfig /usr/lib
