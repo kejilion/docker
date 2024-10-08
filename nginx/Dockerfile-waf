@@ -92,7 +92,20 @@ RUN cp /etc/nginx/modsec/crs-setup.conf.example /etc/nginx/modsec/crs-setup.conf
 RUN wget https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/refs/heads/v3/master/modsecurity.conf-recommended -O /etc/nginx/modsec/modsecurity.conf && \
     sed -i 's/SecRuleEngine DetectionOnly/SecRuleEngine On/' /etc/nginx/modsec/modsecurity.conf && \
     sed -i 's/SecPcreMatchLimit [0-9]\+/SecPcreMatchLimit 20000/' /etc/nginx/modsec/modsecurity.conf && \
-    sed -i 's/SecPcreMatchLimitRecursion [0-9]\+/SecPcreMatchLimitRecursion 20000/' /etc/nginx/modsec/modsecurity.conf
+    sed -i 's/SecPcreMatchLimitRecursion [0-9]\+/SecPcreMatchLimitRecursion 20000/' /etc/nginx/modsec/modsecurity.conf && \
+    echo 'Include /etc/nginx/modsec/crs-setup.conf' >> /etc/nginx/modsec/modsecurity.conf && \
+    echo 'Include /etc/nginx/modsec/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf' >> /etc/nginx/modsec/modsecurity.conf && \
+    echo 'Include /etc/nginx/modsec/rules/REQUEST-901-INITIALIZATION.conf' >> /etc/nginx/modsec/modsecurity.conf && \
+    echo 'Include /etc/nginx/modsec/rules/REQUEST-905-COMMON-EXCEPTIONS.conf' >> /etc/nginx/modsec/modsecurity.conf && \
+    echo 'Include /etc/nginx/modsec/rules/REQUEST-941-APPLICATION-ATTACK-XSS.conf' >> /etc/nginx/modsec/modsecurity.conf && \
+    echo 'Include /etc/nginx/modsec/rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf' >> /etc/nginx/modsec/modsecurity.conf && \
+    echo 'Include /etc/nginx/modsec/rules/REQUEST-943-APPLICATION-ATTACK-SESSION-FIXATION.conf' >> /etc/nginx/modsec/modsecurity.conf && \
+    echo 'Include /etc/nginx/modsec/rules/REQUEST-911-METHOD-ENFORCEMENT.conf' >> /etc/nginx/modsec/modsecurity.conf && \
+    echo 'Include /etc/nginx/modsec/rules/REQUEST-920-PROTOCOL-ENFORCEMENT.conf' >> /etc/nginx/modsec/modsecurity.conf && \
+    echo 'Include /etc/nginx/modsec/rules/REQUEST-913-SCANNER-DETECTION.conf' >> /etc/nginx/modsec/modsecurity.conf && \
+    echo 'Include /etc/nginx/modsec/rules/RESPONSE-950-DATA-LEAKAGES.conf' >> /etc/nginx/modsec/modsecurity.conf
+
+
 
 RUN apk add lua5.1 lua5.1-dev pcre pcre-dev yajl yajl-dev  
 RUN ldconfig /usr/lib
