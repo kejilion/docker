@@ -87,6 +87,9 @@ RUN mkdir -p /etc/nginx/modsec && \
     tar -xzf v${CORERULESET_VERSION}.tar.gz --strip-components=1 -C /etc/nginx/modsec && \
     rm -f v${CORERULESET_VERSION}.tar.gz
 
+# Download files from the plugins directory
+RUN wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/refs/heads/master/plugins/wordpress-rule-exclusions-before.conf && \
+    wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/refs/heads/master/plugins/wordpress-rule-exclusions-config.conf
 
 RUN cp /etc/nginx/modsec/crs-setup.conf.example /etc/nginx/modsec/crs-setup.conf
 
