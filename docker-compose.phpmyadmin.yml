@@ -2,7 +2,6 @@ services:
   phpmyadmin:
     image: phpmyadmin:latest
     container_name: phpmyadmin
-    restart: always
     ports:
       - "8877:80"
     environment:
