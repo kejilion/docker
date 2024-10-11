@@ -89,7 +89,8 @@ RUN mkdir -p /etc/nginx/modsec && \
 
 # Download files from the plugins directory
 RUN wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/refs/heads/master/plugins/wordpress-rule-exclusions-before.conf && \
-    wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/refs/heads/master/plugins/wordpress-rule-exclusions-config.conf
+    wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/refs/heads/master/plugins/wordpress-rule-exclusions-config.conf && \
+    wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/kejilion/nginx/refs/heads/main/waf/ldnmp-before.conf
 
 RUN cp /etc/nginx/modsec/crs-setup.conf.example /etc/nginx/modsec/crs-setup.conf
 
