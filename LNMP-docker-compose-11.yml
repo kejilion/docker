@@ -1,0 +1,65 @@
+
+services:
+  nginx:
+    image: kjlion/nginx:alpine
+    container_name: nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - /home/web/nginx.conf:/etc/nginx/nginx.conf
+      - /home/web/conf.d:/etc/nginx/conf.d
+      - /home/web/certs:/etc/nginx/certs
+      - /home/web/html:/var/www/html
+      - /home/web/log/nginx:/var/log/nginx
+    tmpfs:
+      - /var/cache/nginx:rw,noexec,nosuid,size=3g
+    deploy:
+      replicas: 2  # 设置 Nginx 的副本数量
+      restart_policy:
+        condition: on-failure
+
+  php:
+    image: kjlion/php:fpm-alpine
+    container_name: php
+    restart: always
+    volumes:
+      - /home/web/html:/var/www/html
+    deploy:
+      replicas: 2  # 设置 PHP 的副本数量
+
+  php74:
+    image: kjlion/php:7.4-fpm-alpine
+    container_name: php74
+    restart: always
+    volumes:
+      - /home/web/html:/var/www/html
+    deploy:
+      replicas: 1  # 根据需要设置副本数量
+
+  mysql:
+    image: mysql
+    container_name: mysql
+    restart: always
+    volumes:
+      - /home/web/mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: webroot
+      MYSQL_USER: kejilion
+      MYSQL_PASSWORD: kejilionYYDS
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager  # 将 MySQL 限制在管理节点上
+      replicas: 1  # MySQL 一般只需一个副本
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: always
+    volumes:
+      - /home/web/redis:/data
+    deploy:
+      replicas: 1  # Redis 一般只需一个副本
