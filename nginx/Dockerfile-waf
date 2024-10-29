@@ -79,7 +79,7 @@ COPY --from=builder /app/nginx-${NGINX_VERSION}/objs/*.so /etc/nginx/modules/
 COPY --from=builder /usr/local/modsecurity/lib/* /usr/lib/
 
 # Define build argument for Core Rule Set version
-ARG CORERULESET_VERSION="4.7.0"
+ARG CORERULESET_VERSION="4.8.0"
 
 # Create configuration directory
 RUN mkdir -p /etc/nginx/modsec && \
