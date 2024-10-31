@@ -20,6 +20,13 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Get latest versions
+        id: get_versions
+        run: |
+          echo "NGINX_VERSION=$(curl -s https://api.github.com/repos/nginx/nginx/releases/latest | grep -oP '"tag_name": "\K[^"]+' | sed 's/release-//')" >> $GITHUB_ENV
+          echo "ZSTD_VERSION=$(curl -s https://api.github.com/repos/facebook/zstd/releases/latest | grep -oP '"tag_name": "\K[^"]+' | sed 's/v//')" >> $GITHUB_ENV
+          echo "CORERULESET_VERSION=$(curl -s https://api.github.com/repos/coreruleset/coreruleset/releases/latest | grep -oP '"tag_name": "\K[^"]+' | sed 's/v//')" >> $GITHUB_ENV
+
       - name: Build and push NGINX image 
         uses: docker/build-push-action@v4
         with:
@@ -28,3 +35,7 @@ jobs:
           push: true
           tags: kjlion/nginx:alpine-dav
           platforms: linux/amd64,linux/arm64
+          build-args: |
+            NGINX_VERSION=${{ env.NGINX_VERSION }}
+            ZSTD_VERSION=${{ env.ZSTD_VERSION }}
+            CORERULESET_VERSION=${{ env.CORERULESET_VERSION }}
