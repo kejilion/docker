@@ -27,7 +27,8 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Set the Nginx version as a build argument
-ARG NGINX_VERSION=1.27.2
+# ARG NGINX_VERSION=1.27.2
+ARG NGINX_VERSION
 
 # Download and extract the specified version of Nginx
 RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz && \
@@ -50,7 +51,8 @@ RUN git clone --depth 1 https://github.com/SpiderLabs/ModSecurity-nginx /app/Mod
 
 
 # 下载并构建 Zstandard
-ARG ZSTD_VERSION=1.5.6
+# ARG ZSTD_VERSION=1.5.6
+ARG ZSTD_VERSION
 RUN wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz && \
     tar -xzf zstd-${ZSTD_VERSION}.tar.gz && \
     cd zstd-${ZSTD_VERSION} && \
@@ -72,14 +74,17 @@ RUN cd nginx-${NGINX_VERSION} && \
 # Use the official Nginx Alpine image for the final stage
 FROM nginx:alpine
 
-ARG NGINX_VERSION=1.27.2
+# ARG NGINX_VERSION=1.27.2
+ARG NGINX_VERSION
+
 COPY --from=builder /app/nginx-${NGINX_VERSION}/objs/*.so /etc/nginx/modules/
 
 # Copy libmodsecurity directory files to /usr/lib/
 COPY --from=builder /usr/local/modsecurity/lib/* /usr/lib/
 
 # Define build argument for Core Rule Set version
-ARG CORERULESET_VERSION="4.8.0"
+# ARG CORERULESET_VERSION="4.8.0"
+ARG CORERULESET_VERSION
 
 # Create configuration directory
 RUN mkdir -p /etc/nginx/modsec && \
