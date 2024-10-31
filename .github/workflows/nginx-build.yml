@@ -1,0 +1,30 @@
+name: Publish NGINX Image 
+
+on:
+  workflow_dispatch:   # 手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push NGINX image 
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: nginx/Dockerfile-waf
+          push: true
+          tags: kjlion/nginx:alpine-dav
+          platforms: linux/amd64,linux/arm64
