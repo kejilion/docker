@@ -35,7 +35,7 @@ jobs:
           context: .
           file: nginx/Dockerfile-waf
           push: true
-          tags: kjlion/nginx:alpine
+          tags: kjlion/nginx:alpine-dev
           platforms: linux/amd64,linux/arm64
           build-args: |
             NGINX_VERSION=${{ env.NGINX_VERSION }}
