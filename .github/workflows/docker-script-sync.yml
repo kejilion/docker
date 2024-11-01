@@ -1,0 +1,41 @@
+name: DockerScript Sync
+
+on:
+  schedule:
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check repository
+        uses: actions/checkout@v4
+
+      - name: Download latest get-docker.sh
+        run: |
+          curl -o get-docker.sh https://get.docker.com
+
+      - name: Compare files
+        run: |
+          if ! diff -q ./install get-docker.sh; then
+            mv get-docker.sh ./install
+            echo "changed=true" >> $GITHUB_ENV
+          else
+            rm -f get-docker.sh
+            echo "changed=false" >> $GITHUB_ENV
+          fi
+
+      - name: Commit and push
+        if: env.changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add ./install
+          git commit -m "update from actions 🤖"
+          git push origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
