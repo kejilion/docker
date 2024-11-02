@@ -1,7 +1,7 @@
 FROM php:fpm-alpine
 
 RUN apk update && apk add --no-cache \
-    imagemagick imagemagick-dev \
+    imagemagick imagemagick-dev libgomp \
     git autoconf gcc g++ make pkgconfig \
     && git clone https://github.com/Imagick/imagick /tmp/imagick \
     && cd /tmp/imagick \
