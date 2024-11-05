@@ -48,8 +48,6 @@ RUN mkdir -p /etc/nginx/modsec/plugins \
     && rm -f v${CORERULESET_VERSION}.tar.gz \
     && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/master/plugins/wordpress-rule-exclusions-before.conf \
     && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/master/plugins/wordpress-rule-exclusions-config.conf \
-    && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/dos-protection-plugin-modsecurity/refs/heads/main/plugins/dos-protection-before.conf \
-    && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/dos-protection-plugin-modsecurity/refs/heads/main/plugins/dos-protection-config.conf \
     && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/kejilion/nginx/main/waf/ldnmp-before.conf \
     && cp /etc/nginx/modsec/crs-setup.conf.example /etc/nginx/modsec/crs-setup.conf \
     && wget https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/v3/master/modsecurity.conf-recommended -O /etc/nginx/modsec/modsecurity.conf \
