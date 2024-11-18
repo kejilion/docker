@@ -24,6 +24,10 @@ services:
     restart: always
     volumes:
       - ./html:/var/www/html
+    depends_on:
+      mysql:
+        condition: service_healthy
+
 
   php74:
     image: kjlion/php:7.4-fpm-alpine
@@ -31,6 +35,9 @@ services:
     restart: always
     volumes:
       - ./html:/var/www/html
+    depends_on:
+      mysql:
+        condition: service_healthy
 
   mysql:
     image: mysql
@@ -42,6 +49,11 @@ services:
       MYSQL_ROOT_PASSWORD: webroot
       MYSQL_USER: kejilion
       MYSQL_PASSWORD: kejilionYYDS
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pwebroot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:alpine
