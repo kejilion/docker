@@ -51,7 +51,7 @@ services:
       MYSQL_PASSWORD: kejilionYYDS
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pwebroot"]
-      interval: 20s
+      interval: 30s
       timeout: 5s
       retries: 5
 
