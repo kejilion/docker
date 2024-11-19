@@ -50,7 +50,8 @@ services:
       MYSQL_USER: kejilion
       MYSQL_PASSWORD: kejilionYYDS
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pwebroot"]
+      # test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pwebroot"]
+      test: ["CMD-SHELL", "test -S /var/run/mysqld/mysqld.sock"]
       interval: 5s
       timeout: 5s
       retries: 10
