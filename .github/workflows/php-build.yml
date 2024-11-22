@@ -28,5 +28,5 @@ jobs:
           context: .
           file: php-fpm/Dockerfile
           push: true
-          tags: kjlion/php:fpm-alpine-dev
+          tags: kjlion/php:fpm-alpine
           platforms: linux/amd64,linux/arm64
