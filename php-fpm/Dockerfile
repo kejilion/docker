@@ -3,17 +3,9 @@ FROM php:8.3-fpm-alpine
 RUN apk update && apk add --no-cache \
     imagemagick imagemagick-dev libgomp \
     git autoconf gcc g++ make pkgconfig \
-    && git clone https://github.com/Imagick/imagick /tmp/imagick \
-    && cd /tmp/imagick \
-    && phpize \
-    && ./configure \
-    && make \
-    && make install \
-    && echo 'extension=imagick.so' > /usr/local/etc/php/conf.d/imagick.ini \
-    && rm -rf /tmp/imagick \
     && curl -fsSL https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions -o /usr/local/bin/install-php-extensions \
     && chmod +x /usr/local/bin/install-php-extensions \
-    && /usr/local/bin/install-php-extensions mysqli pdo_mysql gd intl zip exif bcmath opcache redis \
+    && /usr/local/bin/install-php-extensions mysqli pdo_mysql gd intl zip exif bcmath opcache redis Imagick/imagick@65e27f2bc0 \
     && apk del git autoconf gcc g++ make pkgconfig \
     && rm -rf /var/cache/apk/*
 
