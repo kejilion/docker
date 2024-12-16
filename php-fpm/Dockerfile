@@ -15,3 +15,6 @@ RUN echo "upload_max_filesize=50M" > /usr/local/etc/php/conf.d/uploads.ini \
     && echo "max_execution_time=1200" > /usr/local/etc/php/conf.d/max_execution_time.ini \
     && echo "max_input_time=600" > /usr/local/etc/php/conf.d/max_input_time.ini \
     && echo "max_input_vars=3000" > /usr/local/etc/php/conf.d/max_input_vars.ini \
+    && echo "max_input_vars=3000" > /usr/local/etc/php/conf.d/max_input_vars.ini \
+    && cd /usr/local/etc/php/conf.d/ && curl -sL https://raw.githubusercontent.com/kejilion/sh/main/optimized_php.ini \
+    && cd /usr/local/etc/php-fpm.d/ && curl -sL https://raw.githubusercontent.com/kejilion/sh/main/www-1.conf  
