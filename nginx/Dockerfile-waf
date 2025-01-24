@@ -7,6 +7,7 @@ RUN apk add --no-cache pcre-dev zlib-dev openssl-dev wget git build-base brotli-
 
 WORKDIR /usr/src
 
+# 下载nginx brotli并构建Zstandard
 RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && tar -zxf nginx-${NGINX_VERSION}.tar.gz \
     && git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli \
@@ -19,9 +20,6 @@ RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && make && make install \
     && cd .. \
     && git clone --depth 1 https://github.com/SpiderLabs/ModSecurity-nginx \
-    && cd ModSecurity-nginx \
-    && git checkout ef64996 \  # 切换到 ef64996 提交
-    && cd .. \
     && wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz \
     && tar -xzf zstd-${ZSTD_VERSION}.tar.gz \
     && cd zstd-${ZSTD_VERSION} \
@@ -29,12 +27,12 @@ RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && CFLAGS="-fPIC" make && make install \
     && cd .. \
     && git clone --depth=10 https://github.com/tokers/zstd-nginx-module.git \
-    && cd nginx-${NGINX_VERSION} \
-    && ./configure --with-compat \
+    && cd nginx-${NGINX_VERSION} && \
+    ./configure --with-compat \
                 --add-dynamic-module=../ngx_brotli \
                 --add-dynamic-module=../ModSecurity-nginx \
-                --add-dynamic-module=../zstd-nginx-module \
-    && make modules
+                --add-dynamic-module=../zstd-nginx-module && \
+    make modules
 
 FROM nginx:alpine
 ARG CORERULESET_VERSION
@@ -68,4 +66,3 @@ RUN mkdir -p /etc/nginx/modsec/plugins \
     && ldconfig /usr/lib \
     && wget https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/v3/master/unicode.mapping -O /etc/nginx/modsec/unicode.mapping \
     && rm -rf /var/cache/apk/*
-
