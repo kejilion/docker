@@ -19,7 +19,7 @@ RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && ./configure \
     && make && make install \
     && cd .. \
-    && git clone --depth 2 https://github.com/SpiderLabs/ModSecurity-nginx \
+    && git clone https://github.com/SpiderLabs/ModSecurity-nginx \
     && cd ModSecurity-nginx \
     && git checkout ae30826 \
     && cd .. \
