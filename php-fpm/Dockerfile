@@ -1,7 +1,7 @@
 FROM php:fpm-alpine
 
 RUN apk update && apk add --no-cache \
-    imagemagick imagemagick-dev libgomp musl-dev \
+    imagemagick imagemagick-dev libgomp \
     git autoconf gcc g++ make pkgconfig \
     && curl -fsSL https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions -o /usr/local/bin/install-php-extensions \
     && chmod +x /usr/local/bin/install-php-extensions \
