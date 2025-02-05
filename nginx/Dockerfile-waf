@@ -11,7 +11,7 @@ WORKDIR /usr/src
 RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && tar -zxf nginx-${NGINX_VERSION}.tar.gz \
     && git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli \
-    && git clone --depth 1 https://github.com/SpiderLabs/ModSecurity \
+    && git clone --depth 1 https://github.com/owasp-modsecurity/ModSecurity \
     && cd ModSecurity \
     && git submodule init \
     && git submodule update \
