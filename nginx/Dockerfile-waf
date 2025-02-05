@@ -7,34 +7,51 @@ RUN apk add --no-cache pcre-dev zlib-dev openssl-dev wget git build-base brotli-
 
 WORKDIR /usr/src
 
-# 下载nginx brotli并构建Zstandard
+# Download NGINX
 RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
-    && tar -zxf nginx-${NGINX_VERSION}.tar.gz \
-    && git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli \
-    && git clone --depth 1 https://github.com/owasp-modsecurity/ModSecurity \
+    && tar -zxf nginx-${NGINX_VERSION}.tar.gz
+
+# Clone Brotli module
+RUN git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli
+
+# Clone and build ModSecurity
+RUN git clone --depth 1 https://github.com/owasp-modsecurity/ModSecurity \
     && cd ModSecurity \
     && git submodule init \
     && git submodule update \
     && ./build.sh \
     && ./configure \
     && make && make install \
-    && cd .. \
-    && git clone https://github.com/owasp-modsecurity/ModSecurity-nginx \
+    && cd ..
+
+# Clone ModSecurity NGINX module
+RUN git clone https://github.com/owasp-modsecurity/ModSecurity-nginx \
     && cd ModSecurity-nginx \
     && git checkout ef64996 \
-    && wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz \
+    && cd ..
+
+# Download and build Zstandard
+RUN wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz \
     && tar -xzf zstd-${ZSTD_VERSION}.tar.gz \
     && cd zstd-${ZSTD_VERSION} \
     && make clean \
     && CFLAGS="-fPIC" make && make install \
-    && cd .. \
-    && git clone --depth=10 https://github.com/tokers/zstd-nginx-module.git \
-    && cd nginx-${NGINX_VERSION} && \
+    && cd ..
+
+# Clone Zstandard NGINX module
+RUN git clone --depth=10 https://github.com/tokers/zstd-nginx-module.git
+
+# Configure and build NGINX with modules
+RUN cd nginx-${NGINX_VERSION} && \
     ./configure --with-compat \
                 --add-dynamic-module=../ngx_brotli \
                 --add-dynamic-module=../ModSecurity-nginx \
                 --add-dynamic-module=../zstd-nginx-module && \
     make modules
+
+
+
+
 
 FROM nginx:alpine
 ARG CORERULESET_VERSION
