@@ -21,7 +21,6 @@ RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && cd .. \
     && wget https://github.com/owasp-modsecurity/ModSecurity-nginx/releases/download/v1.0.3/modsecurity-nginx-v1.0.3.tar.gz \
     && tar -xzf modsecurity-nginx-v1.0.3.tar.gz \
-    && mv modsecurity-nginx-v1.0.3 Modsecurity-nginx \
     && wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz \
     && tar -xzf zstd-${ZSTD_VERSION}.tar.gz \
     && cd zstd-${ZSTD_VERSION} \
@@ -32,7 +31,7 @@ RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && cd nginx-${NGINX_VERSION} && \
     ./configure --with-compat \
                 --add-dynamic-module=../ngx_brotli \
-                --add-dynamic-module=../ModSecurity-nginx \
+                --add-dynamic-module=../modsecurity-nginx-v1.0.3 \
                 --add-dynamic-module=../zstd-nginx-module && \
     make modules
 
