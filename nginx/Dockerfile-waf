@@ -19,7 +19,9 @@ RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && ./configure \
     && make && make install \
     && cd .. \
-    && git clone --branch ef64996 --depth 1 https://github.com/owasp-modsecurity/ModSecurity-nginx \
+    && git clone https://github.com/owasp-modsecurity/ModSecurity-nginx ModSecurity-nginx \
+    && cd ModSecurity-nginx \
+    && git checkout ef64996aedd4bb5fa1831631361244813d48b82f \
     && wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz \
     && tar -xzf zstd-${ZSTD_VERSION}.tar.gz \
     && cd zstd-${ZSTD_VERSION} \
