@@ -20,14 +20,8 @@ RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && make && make install \
     && cd .. \
     && wget https://github.com/owasp-modsecurity/ModSecurity-nginx/releases/download/v1.0.3/modsecurity-nginx-v1.0.3.tar.gz \
-    && echo "文件下载完成，检查是否存在：" \
-    && ls -l modsecurity-nginx-v1.0.3.tar.gz \
     && tar -xzf modsecurity-nginx-v1.0.3.tar.gz \
-    && echo "解压完成，检查解压后的内容：" \
-    && ls -l \
-    && mv modsecurity-nginx-v1.0.3 modsecurity-nginx \
-    && echo "移动完成，检查结果：" \
-    && ls -l modsecurity-nginx  \
+    && mv modsecurity-nginx-v1.0.3 Modsecurity-nginx \
     && wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz \
     && tar -xzf zstd-${ZSTD_VERSION}.tar.gz \
     && cd zstd-${ZSTD_VERSION} \
