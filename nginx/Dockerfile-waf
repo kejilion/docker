@@ -19,8 +19,7 @@ RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && ./configure \
     && make && make install \
     && cd .. \
-    && wget https://github.com/owasp-modsecurity/ModSecurity-nginx/releases/download/v1.0.3/modsecurity-nginx-v1.0.3.tar.gz \
-    && tar -xzf modsecurity-nginx-v1.0.3.tar.gz \
+    && git clone --depth 1 https://github.com/SpiderLabs/ModSecurity-nginx \
     && wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz \
     && tar -xzf zstd-${ZSTD_VERSION}.tar.gz \
     && cd zstd-${ZSTD_VERSION} \
@@ -31,7 +30,7 @@ RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && cd nginx-${NGINX_VERSION} && \
     ./configure --with-compat \
                 --add-dynamic-module=../ngx_brotli \
-                --add-dynamic-module=../modsecurity-nginx-v1.0.3 \
+                --add-dynamic-module=../ModSecurity-nginx \
                 --add-dynamic-module=../zstd-nginx-module && \
     make modules
 
@@ -64,6 +63,19 @@ RUN mkdir -p /etc/nginx/modsec/plugins \
     && echo 'Include /etc/nginx/modsec/rules/*.conf' >> /etc/nginx/modsec/modsecurity.conf \
     && echo 'Include /etc/nginx/modsec/plugins/*-after.conf' >> /etc/nginx/modsec/modsecurity.conf \
     && apk add --no-cache lua5.1 lua5.1-dev pcre pcre-dev yajl yajl-dev \
+    && ldconfig /usr/lib \
+    && wget https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/v3/master/unicode.mapping -O /etc/nginx/modsec/unicode.mapping \
+    && rm -rf /var/cache/apk/*
+
+
+
+
+
+
+
+
+
+
     && ldconfig /usr/lib \
     && wget https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/v3/master/unicode.mapping -O /etc/nginx/modsec/unicode.mapping \
     && rm -rf /var/cache/apk/*
