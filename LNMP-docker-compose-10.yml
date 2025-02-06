@@ -15,7 +15,7 @@ services:
       - ./html:/var/www/html
       - ./log/nginx:/var/log/nginx
     tmpfs:
-      - /var/cache/nginx:rw,noexec,nosuid,size=512m
+      - /var/cache/nginx:rw,noexec,nosuid,size=1024m
 
 
   php:
