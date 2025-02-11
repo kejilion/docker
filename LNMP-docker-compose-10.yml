@@ -61,3 +61,8 @@ services:
     restart: always
     volumes:
       - ./redis:/data
+
+networks:
+  default:
+    enable_ipv6: true
+
