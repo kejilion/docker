@@ -27,7 +27,7 @@ RUN git clone --depth 1 https://github.com/owasp-modsecurity/ModSecurity \
 # Clone ModSecurity NGINX module
 RUN git clone https://github.com/owasp-modsecurity/ModSecurity-nginx \
     && cd ModSecurity-nginx \
-    && git checkout ef64996 \
+    # && git checkout ef64996 \
     && cd ..
 
 # Download and build Zstandard
