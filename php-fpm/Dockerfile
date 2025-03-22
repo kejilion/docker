@@ -5,7 +5,7 @@ RUN apk update && apk add --no-cache \
     git autoconf gcc g++ make pkgconfig \
     && curl -fsSL https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions -o /usr/local/bin/install-php-extensions \
     && chmod +x /usr/local/bin/install-php-extensions \
-    && /usr/local/bin/install-php-extensions Imagick/imagick@65e27f2bc0 mysqli pdo_mysql gd intl zip exif bcmath opcache redis \
+    && /usr/local/bin/install-php-extensions imagick mysqli pdo_mysql gd intl zip exif bcmath opcache redis \
     && apk del git autoconf gcc g++ make pkgconfig \
     && rm -rf /var/cache/apk/*
 
