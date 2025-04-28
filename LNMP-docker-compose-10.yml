@@ -1,6 +1,6 @@
 services:
   nginx:
-    image: kjlion/nginx:alpine
+    image: nginx:alpine
     container_name: nginx
     restart: always
     ports:
