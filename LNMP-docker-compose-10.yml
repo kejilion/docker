@@ -1,22 +1,22 @@
-
 services:
   nginx:
-    image: nginx:alpine
+    image: kjlion/nginx:alpine
     container_name: nginx
     restart: always
     ports:
       - "80:80"
       - "443:443"
-      - "443:443/udp"      
+      - "443:443/udp"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./conf.d:/etc/nginx/conf.d
       - ./certs:/etc/nginx/certs
       - ./html:/var/www/html
       - ./log/nginx:/var/log/nginx
+      - php-socket:/run/php
+      - php-socket:/run/php74
     tmpfs:
-      - /var/cache/nginx:rw,noexec,nosuid,size=1024m
-
+      - /var/cache/nginx:rw,noexec,nosuid,size=2048m
 
   php:
     image: kjlion/php:fpm-alpine
@@ -24,6 +24,7 @@ services:
     restart: always
     volumes:
       - ./html:/var/www/html
+      - php-socket:/run/php
     depends_on:
       mysql:
         condition: service_healthy
@@ -35,9 +36,11 @@ services:
     restart: always
     volumes:
       - ./html:/var/www/html
+      - php-socket:/run/php74
     depends_on:
       mysql:
         condition: service_healthy
+
 
   mysql:
     image: mysql
@@ -61,6 +64,15 @@ services:
     restart: always
     volumes:
       - ./redis:/data
+
+volumes:
+  php-socket:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=64m
+
 
 networks:
   default:
