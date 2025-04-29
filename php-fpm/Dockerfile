@@ -18,8 +18,7 @@ RUN echo "upload_max_filesize=50M" > /usr/local/etc/php/conf.d/uploads.ini \
     && echo "max_input_vars=5000" > /usr/local/etc/php/conf.d/max_input_vars.ini \
     && curl -o /usr/local/etc/php/conf.d/optimized_php.ini https://raw.githubusercontent.com/kejilion/sh/main/optimized_php.ini \
     && curl -o /usr/local/etc/php-fpm.d/www.conf https://raw.githubusercontent.com/kejilion/sh/main/www-1.conf \
-    && mkdir -p /run/php && chmod 777 /run/php \ 
-    && sed -i '1i [global]\\ndaemonize = no' /usr/local/etc/php-fpm.d/www.conf \     
+    && mkdir -p /run/php && chmod 777 /run/php \    
     && sed -i '/^listen =/d' /usr/local/etc/php-fpm.d/www.conf \     
     && echo -e '\nlisten = /run/php/php-fpm.sock\nlisten.owner = www-data\nlisten.group = www-data\nlisten.mode = 0777' >> /usr/local/etc/php-fpm.d/www.conf \   
     && rm -f /usr/local/etc/php-fpm.d/zz-docker.conf
