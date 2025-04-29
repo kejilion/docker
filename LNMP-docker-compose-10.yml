@@ -13,8 +13,8 @@ services:
       - ./certs:/etc/nginx/certs
       - ./html:/var/www/html
       - ./log/nginx:/var/log/nginx
-      - php-socket:/run/php
-      - php-socket:/run/php74
+      - php-socket-php:/run/php
+      - php-socket-php74:/run/php74
     tmpfs:
       - /var/cache/nginx:rw,noexec,nosuid,size=2048m
 
@@ -24,7 +24,7 @@ services:
     restart: always
     volumes:
       - ./html:/var/www/html
-      - php-socket:/run/php
+      -  php-socket-php:/run/php
     depends_on:
       mysql:
         condition: service_healthy
@@ -36,7 +36,7 @@ services:
     restart: always
     volumes:
       - ./html:/var/www/html
-      - php-socket:/run/php74
+      -  php-socket-php74:/run/php74
     depends_on:
       mysql:
         condition: service_healthy
@@ -66,7 +66,14 @@ services:
       - ./redis:/data
 
 volumes:
-  php-socket:
+  php-socket-php:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=64m
+
+  php-socket-php74:
     driver: local
     driver_opts:
       type: tmpfs
