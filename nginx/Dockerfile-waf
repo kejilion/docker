@@ -54,7 +54,7 @@ RUN cd nginx-${NGINX_VERSION} && \
 
 
 FROM nginx:alpine
-ARG CORERULESET_VERSION
+ARG NGINX_VERSION CORERULESET_VERSION
 
 # 复制压缩模块和 ModSecurity
 COPY --from=builder /usr/src/nginx-${NGINX_VERSION}/objs/*.so /etc/nginx/modules/
