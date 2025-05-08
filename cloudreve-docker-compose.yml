@@ -11,6 +11,7 @@ services:
       - ./cloudreve/conf.ini:/cloudreve/conf.ini
       - ./cloudreve/cloudreve.db:/cloudreve/cloudreve.db
       - ./cloudreve/avatar:/cloudreve/avatar
+      - ./cloudreve/data:/cloudreve/data
     depends_on:
       - aria2
 
