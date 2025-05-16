@@ -81,7 +81,7 @@ volumes:
       o: size=64m
 
 
-networks:
-  default:
-    enable_ipv6: true
+# networks:
+#   default:
+#     enable_ipv6: true
 
