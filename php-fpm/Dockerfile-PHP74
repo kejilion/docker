@@ -11,7 +11,7 @@ RUN apk update && apk add --no-cache \
 
 RUN echo "upload_max_filesize=50M" > /usr/local/etc/php/conf.d/uploads.ini \
     && echo "post_max_size=50M" > /usr/local/etc/php/conf.d/post.ini \
-    && echo "memory_limit=256M" > /usr/local/etc/php/conf.d/memory.ini \
+    && echo "memory_limit=512M" > /usr/local/etc/php/conf.d/memory.ini \
     && echo "max_execution_time=1200" > /usr/local/etc/php/conf.d/max_execution_time.ini \
     && echo "max_input_time=600" > /usr/local/etc/php/conf.d/max_input_time.ini \
     && echo "max_input_vars=5000" > /usr/local/etc/php/conf.d/max_input_vars.ini \
