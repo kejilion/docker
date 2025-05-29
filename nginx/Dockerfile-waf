@@ -11,7 +11,7 @@ WORKDIR /usr/src
 RUN wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
     && tar -xzf openssl-${OPENSSL_VERSION}.tar.gz \
     && cd openssl-${OPENSSL_VERSION} \
-    && ./Configure linux-x86_64 --prefix=/usr/local/openssl --openssldir=/usr/local/openssl shared \
+    && ./Configure linux-aarch64 --prefix=/usr/local/openssl --openssldir=/usr/local/openssl shared \
     && make -j$(nproc) \
     && make install \
     && cd ..
