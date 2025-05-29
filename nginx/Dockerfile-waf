@@ -8,10 +8,22 @@ RUN apk add --no-cache pcre-dev zlib-dev wget git build-base brotli-dev \
 WORKDIR /usr/src
 
 # Download and build latest OpenSSL
-RUN wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
+RUN case $(uname -m) in \
+        x86_64) \
+            OPENSSL_PLATFORM="linux-x86_64"; \
+            ;; \
+        aarch64) \
+            OPENSSL_PLATFORM="linux-aarch64"; \
+            ;; \
+        *) \
+            echo "Unsupported architecture: $(uname -m)"; \
+            exit 1; \
+            ;; \
+    esac && \
+    wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
     && tar -xzf openssl-${OPENSSL_VERSION}.tar.gz \
     && cd openssl-${OPENSSL_VERSION} \
-    && ./Configure linux-aarch64 --prefix=/usr/local/openssl --openssldir=/usr/local/openssl shared \
+    && ./Configure ${OPENSSL_PLATFORM} --prefix=/usr/local/openssl --openssldir=/usr/local/openssl shared \
     && make -j$(nproc) \
     && make install \
     && cd ..
