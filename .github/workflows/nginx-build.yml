@@ -43,3 +43,4 @@ jobs:
             NGINX_VERSION=${{ env.NGINX_VERSION }}
             ZSTD_VERSION=${{ env.ZSTD_VERSION }}
             CORERULESET_VERSION=${{ env.CORERULESET_VERSION }}
+            OPENSSL_VERSION=${{ env.OPENSSL_VERSION }}
