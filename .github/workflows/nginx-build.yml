@@ -29,7 +29,7 @@ jobs:
           echo "NGINX_VERSION=1.27.5" >> $GITHUB_ENV
           echo "ZSTD_VERSION=$(curl -s https://api.github.com/repos/facebook/zstd/releases/latest | grep -oP '"tag_name": "\K[^"]+' | sed 's/v//')" >> $GITHUB_ENV
           echo "CORERULESET_VERSION=$(curl -s https://api.github.com/repos/coreruleset/coreruleset/releases/latest | grep -oP '"tag_name": "\K[^"]+' | sed 's/v//')" >> $GITHUB_ENV
-          echo "OPENSSL_VERSION=$(curl -s https://api.github.com/repos/openssl/openssl/releases/latest | grep -oP '"tag_name": "\K[^"]+' | sed 's/openssl-//')" >> $GITHUB_ENV
+          echo "OPENSSL_VERSION=3.5.0" >> $GITHUB_ENV
           
       - name: Build and push NGINX image 
         uses: docker/build-push-action@v4
