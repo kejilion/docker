@@ -25,8 +25,9 @@ RUN case $(uname -m) in \
     && cd openssl-${OPENSSL_VERSION} \
     && ./Configure ${OPENSSL_PLATFORM} --prefix=/usr/local/openssl --openssldir=/usr/local/openssl shared \
     && make -j$(nproc) \
-    && make install \
-    && cd ..
+    && make install_sw install_ssldirs \
+    && cd .. \
+    && rm -rf openssl-${OPENSSL_VERSION}.tar.gz openssl-${OPENSSL_VERSION}
 
 # Download NGINX
 RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
@@ -79,6 +80,7 @@ FROM nginx:alpine
 ARG NGINX_VERSION CORERULESET_VERSION
 
 # Copy OpenSSL libraries
+RUN mkdir -p /usr/lib/
 COPY --from=builder /usr/local/openssl/lib/* /usr/lib/
 
 # 复制压缩模块和 ModSecurity
