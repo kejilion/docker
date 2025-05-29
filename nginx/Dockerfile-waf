@@ -27,7 +27,9 @@ RUN case $(uname -m) in \
     && make -j$(nproc) \
     && make install_sw install_ssldirs \
     && cd .. \
-    && rm -f openssl-${OPENSSL_VERSION}.tar.gz
+    && rm -f openssl-${OPENSSL_VERSION}.tar.gz \
+    && ls -la /usr/local/openssl/ \
+    && ls -la /usr/local/openssl/lib/ || echo "OpenSSL lib directory not found"
 
 # Download NGINX
 RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
@@ -79,9 +81,18 @@ RUN cd nginx-${NGINX_VERSION} && \
 FROM nginx:alpine
 ARG NGINX_VERSION CORERULESET_VERSION
 
-# Copy OpenSSL libraries
+# Debug and copy OpenSSL installation
+RUN find /usr/local/openssl -type f -name "*.so*" || echo "No shared libraries found" \
+    && find /usr/local/openssl -type d || echo "No directories found"
+
+# Copy OpenSSL libraries - more robust approach
 RUN mkdir -p /usr/lib/
-COPY --from=builder /usr/local/openssl/lib/* /usr/lib/
+RUN if [ -d "/usr/local/openssl/lib64" ]; then \
+        cp -r /usr/local/openssl/lib64/* /usr/lib/ 2>/dev/null || true; \
+    fi && \
+    if [ -d "/usr/local/openssl/lib" ]; then \
+        cp -r /usr/local/openssl/lib/* /usr/lib/ 2>/dev/null || true; \
+    fi
 
 # 复制压缩模块和 ModSecurity
 COPY --from=builder /usr/src/nginx-${NGINX_VERSION}/objs/*.so /etc/nginx/modules/
