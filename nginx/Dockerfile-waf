@@ -1,11 +1,20 @@
 FROM alpine:latest AS builder
-ARG NGINX_VERSION ZSTD_VERSION
+ARG NGINX_VERSION ZSTD_VERSION OPENSSL_VERSION
 
-RUN apk add --no-cache pcre-dev zlib-dev openssl-dev wget git build-base brotli-dev \
+RUN apk add --no-cache pcre-dev zlib-dev wget git build-base brotli-dev \
     libxml2-dev libxslt-dev curl-dev yajl-dev lmdb-dev geoip-dev lua-dev \
-    automake autoconf libtool pkgconfig linux-headers pcre2-dev
+    automake autoconf libtool pkgconfig linux-headers pcre2-dev perl
 
 WORKDIR /usr/src
+
+# Download and build latest OpenSSL
+RUN wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
+    && tar -xzf openssl-${OPENSSL_VERSION}.tar.gz \
+    && cd openssl-${OPENSSL_VERSION} \
+    && ./Configure linux-x86_64 --prefix=/usr/local/openssl --openssldir=/usr/local/openssl shared \
+    && make -j$(nproc) \
+    && make install \
+    && cd ..
 
 # Download NGINX
 RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
@@ -27,7 +36,6 @@ RUN git clone --depth 1 https://github.com/owasp-modsecurity/ModSecurity \
 # Clone ModSecurity NGINX module
 RUN git clone https://github.com/owasp-modsecurity/ModSecurity-nginx \
     && cd ModSecurity-nginx \
-    # && git checkout ef64996 \
     && cd ..
 
 # Download and build Zstandard
@@ -41,20 +49,25 @@ RUN wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zst
 # Clone Zstandard NGINX module
 RUN git clone --depth=10 https://github.com/tokers/zstd-nginx-module.git
 
-# Configure and build NGINX with modules
+# Configure and build NGINX with custom OpenSSL and modules
 RUN cd nginx-${NGINX_VERSION} && \
     ./configure --with-compat \
+                --with-openssl=/usr/src/openssl-${OPENSSL_VERSION} \
+                --with-openssl-opt="enable-tls1_3" \
+                --with-http_ssl_module \
+                --with-http_v2_module \
+                --with-http_realip_module \
+                --with-http_gzip_static_module \
                 --add-dynamic-module=../ngx_brotli \
                 --add-dynamic-module=../ModSecurity-nginx \
                 --add-dynamic-module=../zstd-nginx-module && \
     make modules
 
-
-
-
-
 FROM nginx:alpine
 ARG NGINX_VERSION CORERULESET_VERSION
+
+# Copy OpenSSL libraries
+COPY --from=builder /usr/local/openssl/lib/* /usr/lib/
 
 # 复制压缩模块和 ModSecurity
 COPY --from=builder /usr/src/nginx-${NGINX_VERSION}/objs/*.so /etc/nginx/modules/
