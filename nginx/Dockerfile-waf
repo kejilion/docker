@@ -27,7 +27,7 @@ RUN case $(uname -m) in \
     && make -j$(nproc) \
     && make install_sw install_ssldirs \
     && cd .. \
-    && rm -rf openssl-${OPENSSL_VERSION}.tar.gz openssl-${OPENSSL_VERSION}
+    && rm -f openssl-${OPENSSL_VERSION}.tar.gz
 
 # Download NGINX
 RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
