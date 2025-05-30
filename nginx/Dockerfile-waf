@@ -1,6 +1,5 @@
-# 第一阶段：构建环境
 FROM alpine:latest AS builder
-ARG NGINX_VERSION=1.25.3 ZSTD_VERSION=1.5.5
+ARG NGINX_VERSION ZSTD_VERSION
 
 RUN apk add --no-cache pcre-dev zlib-dev openssl-dev wget git build-base brotli-dev \
     libxml2-dev libxslt-dev curl-dev yajl-dev lmdb-dev geoip-dev lua-dev \
@@ -8,14 +7,14 @@ RUN apk add --no-cache pcre-dev zlib-dev openssl-dev wget git build-base brotli-
 
 WORKDIR /usr/src
 
-# 下载NGINX
+# Download NGINX
 RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && tar -zxf nginx-${NGINX_VERSION}.tar.gz
 
-# 克隆Brotli模块
+# Clone Brotli module
 RUN git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli
 
-# 克隆和构建ModSecurity
+# Clone and build ModSecurity
 RUN git clone --depth 1 https://github.com/owasp-modsecurity/ModSecurity \
     && cd ModSecurity \
     && git submodule init \
@@ -25,10 +24,13 @@ RUN git clone --depth 1 https://github.com/owasp-modsecurity/ModSecurity \
     && make && make install \
     && cd ..
 
-# 克隆ModSecurity NGINX模块
-RUN git clone https://github.com/owasp-modsecurity/ModSecurity-nginx
+# Clone ModSecurity NGINX module
+RUN git clone https://github.com/owasp-modsecurity/ModSecurity-nginx \
+    && cd ModSecurity-nginx \
+    # && git checkout ef64996 \
+    && cd ..
 
-# 下载和构建Zstandard
+# Download and build Zstandard
 RUN wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz \
     && tar -xzf zstd-${ZSTD_VERSION}.tar.gz \
     && cd zstd-${ZSTD_VERSION} \
@@ -36,10 +38,10 @@ RUN wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zst
     && CFLAGS="-fPIC" make && make install \
     && cd ..
 
-# 克隆Zstandard NGINX模块
+# Clone Zstandard NGINX module
 RUN git clone --depth=10 https://github.com/tokers/zstd-nginx-module.git
 
-# 配置和构建NGINX
+# Configure and build NGINX with modules
 RUN cd nginx-${NGINX_VERSION} && \
     ./configure --with-compat \
                 --add-dynamic-module=../ngx_brotli \
@@ -47,15 +49,18 @@ RUN cd nginx-${NGINX_VERSION} && \
                 --add-dynamic-module=../zstd-nginx-module && \
     make modules
 
-# 第二阶段：运行环境
-FROM nginx:alpine
-ARG NGINX_VERSION=1.25.3 CORERULESET_VERSION=4.0.0-rc1
 
-# 复制模块和库文件
+
+
+
+FROM nginx:alpine
+ARG NGINX_VERSION CORERULESET_VERSION
+
+# 复制压缩模块和 ModSecurity
 COPY --from=builder /usr/src/nginx-${NGINX_VERSION}/objs/*.so /etc/nginx/modules/
 COPY --from=builder /usr/local/modsecurity/lib/* /usr/lib/
 
-# 创建WAF目录并配置
+# 创建配置目录并下载必要文件
 RUN mkdir -p /etc/nginx/modsec/plugins \
     && wget https://github.com/coreruleset/coreruleset/archive/v${CORERULESET_VERSION}.tar.gz \
     && tar -xzf v${CORERULESET_VERSION}.tar.gz --strip-components=1 -C /etc/nginx/modsec \
@@ -81,11 +86,3 @@ RUN mkdir -p /etc/nginx/modsec/plugins \
     && ldconfig /usr/lib \
     && wget https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/v3/master/unicode.mapping -O /etc/nginx/modsec/unicode.mapping \
     && rm -rf /var/cache/apk/*
-
-# 添加质询页面和配置
-COPY challenge.html /usr/share/nginx/html/challenge.html
-RUN echo 'SecRule TX:ANOMALY_SCORE "@gt 0" "id:1000,phase:4,chain,log,redirect:/challenge.html?url=%{request_uri}&score=%{tx.anomaly_score}"' >> /etc/nginx/modsec/modsecurity.conf \
-    && echo 'SecRule REQUEST_HEADERS:Cookie "!@contains waf_validated=true"' >> /etc/nginx/modsec/modsecurity.conf \
-    && echo 'SecRule TX:ANOMALY_SCORE "@lt %{tx.inbound_anomaly_score_threshold}" "id:1001,phase:5,nolog,pass"' >> /etc/nginx/modsec/modsecurity.conf \
-    && sed -i '1i load_module modules/ngx_http_modsecurity_module.so;' /etc/nginx/nginx.conf \
-    && sed -i '/http {/a \    modsecurity on;\n    modsecurity_rules_file /etc/nginx/modsec/modsecurity.conf;' /etc/nginx/nginx.conf
