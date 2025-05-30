@@ -1,35 +1,11 @@
 FROM alpine:latest AS builder
-ARG NGINX_VERSION ZSTD_VERSION OPENSSL_VERSION
+ARG NGINX_VERSION ZSTD_VERSION
 
-RUN apk add --no-cache pcre-dev zlib-dev wget git build-base brotli-dev \
+RUN apk add --no-cache pcre-dev zlib-dev openssl-dev wget git build-base brotli-dev \
     libxml2-dev libxslt-dev curl-dev yajl-dev lmdb-dev geoip-dev lua-dev \
-    automake autoconf libtool pkgconfig linux-headers pcre2-dev perl
+    automake autoconf libtool pkgconfig linux-headers pcre2-dev
 
 WORKDIR /usr/src
-
-# Download and build latest OpenSSL
-RUN case $(uname -m) in \
-        x86_64) \
-            OPENSSL_PLATFORM="linux-x86_64"; \
-            ;; \
-        aarch64) \
-            OPENSSL_PLATFORM="linux-aarch64"; \
-            ;; \
-        *) \
-            echo "Unsupported architecture: $(uname -m)"; \
-            exit 1; \
-            ;; \
-    esac && \
-    wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
-    && tar -xzf openssl-${OPENSSL_VERSION}.tar.gz \
-    && cd openssl-${OPENSSL_VERSION} \
-    && ./Configure ${OPENSSL_PLATFORM} --prefix=/usr/local/openssl --openssldir=/usr/local/openssl shared \
-    && make -j$(nproc) \
-    && make install_sw install_ssldirs \
-    && cd .. \
-    && rm -f openssl-${OPENSSL_VERSION}.tar.gz \
-    && ls -la /usr/local/openssl/ \
-    && ls -la /usr/local/openssl/lib/ || echo "OpenSSL lib directory not found"
 
 # Download NGINX
 RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
@@ -51,6 +27,7 @@ RUN git clone --depth 1 https://github.com/owasp-modsecurity/ModSecurity \
 # Clone ModSecurity NGINX module
 RUN git clone https://github.com/owasp-modsecurity/ModSecurity-nginx \
     && cd ModSecurity-nginx \
+    # && git checkout ef64996 \
     && cd ..
 
 # Download and build Zstandard
@@ -64,35 +41,20 @@ RUN wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zst
 # Clone Zstandard NGINX module
 RUN git clone --depth=10 https://github.com/tokers/zstd-nginx-module.git
 
-# Configure and build NGINX with custom OpenSSL and modules
+# Configure and build NGINX with modules
 RUN cd nginx-${NGINX_VERSION} && \
     ./configure --with-compat \
-                --with-openssl=/usr/src/openssl-${OPENSSL_VERSION} \
-                --with-openssl-opt="enable-tls1_3" \
-                --with-http_ssl_module \
-                --with-http_v2_module \
-                --with-http_realip_module \
-                --with-http_gzip_static_module \
                 --add-dynamic-module=../ngx_brotli \
                 --add-dynamic-module=../ModSecurity-nginx \
                 --add-dynamic-module=../zstd-nginx-module && \
     make modules
 
+
+
+
+
 FROM nginx:alpine
 ARG NGINX_VERSION CORERULESET_VERSION
-
-# Debug and copy OpenSSL installation
-RUN find /usr/local/openssl -type f -name "*.so*" || echo "No shared libraries found" \
-    && find /usr/local/openssl -type d || echo "No directories found"
-
-# Copy OpenSSL libraries - more robust approach
-RUN mkdir -p /usr/lib/
-RUN if [ -d "/usr/local/openssl/lib64" ]; then \
-        cp -r /usr/local/openssl/lib64/* /usr/lib/ 2>/dev/null || true; \
-    fi && \
-    if [ -d "/usr/local/openssl/lib" ]; then \
-        cp -r /usr/local/openssl/lib/* /usr/lib/ 2>/dev/null || true; \
-    fi
 
 # 复制压缩模块和 ModSecurity
 COPY --from=builder /usr/src/nginx-${NGINX_VERSION}/objs/*.so /etc/nginx/modules/
