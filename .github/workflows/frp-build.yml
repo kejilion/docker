@@ -3,7 +3,7 @@ name: Publish FRP Image
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 28 * *'
+    - cron: '0 0 25 * *'
 
 jobs:
   build:
