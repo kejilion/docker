@@ -80,7 +80,7 @@ set -e
 
 # Git commit from https://github.com/docker/docker-install when
 # the script was uploaded (Should only be modified by upload job):
-SCRIPT_COMMIT_SHA="53a22f61c0628e58e1d6680b49e82993d304b449"
+SCRIPT_COMMIT_SHA="7040dd2bf115a359317b1de84de611aeabcb7bc2"
 
 # strip "v" prefix if present
 VERSION="${VERSION#v}"
@@ -489,14 +489,14 @@ do_install() {
 		raspbian.buster|raspbian.stretch|raspbian.jessie)
 			deprecation_notice "$lsb_dist" "$dist_version"
 			;;
-		ubuntu.bionic|ubuntu.xenial|ubuntu.trusty)
+		ubuntu.focal|ubuntu.bionic|ubuntu.xenial|ubuntu.trusty)
 			deprecation_notice "$lsb_dist" "$dist_version"
 			;;
 		ubuntu.mantic|ubuntu.lunar|ubuntu.kinetic|ubuntu.impish|ubuntu.hirsute|ubuntu.groovy|ubuntu.eoan|ubuntu.disco|ubuntu.cosmic)
 			deprecation_notice "$lsb_dist" "$dist_version"
 			;;
 		fedora.*)
-			if [ "$dist_version" -lt 40 ]; then
+			if [ "$dist_version" -lt 41 ]; then
 				deprecation_notice "$lsb_dist" "$dist_version"
 			fi
 			;;
@@ -554,7 +554,7 @@ do_install() {
 						pkgs="$pkgs docker-compose-plugin docker-ce-rootless-extras$pkg_version"
 				fi
 				if version_gte "23.0"; then
-						pkgs="$pkgs docker-buildx-plugin"
+						pkgs="$pkgs docker-buildx-plugin docker-model-plugin"
 				fi
 				if ! is_dry_run; then
 					set -x
@@ -656,7 +656,7 @@ do_install() {
 					pkgs="$pkgs docker-compose-plugin docker-ce-rootless-extras$pkg_version"
 				fi
 				if version_gte "23.0"; then
-						pkgs="$pkgs docker-buildx-plugin"
+						pkgs="$pkgs docker-buildx-plugin docker-model-plugin"
 				fi
 				if ! is_dry_run; then
 					set -x
