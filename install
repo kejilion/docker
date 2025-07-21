@@ -80,7 +80,7 @@ set -e
 
 # Git commit from https://github.com/docker/docker-install when
 # the script was uploaded (Should only be modified by upload job):
-SCRIPT_COMMIT_SHA="7040dd2bf115a359317b1de84de611aeabcb7bc2"
+SCRIPT_COMMIT_SHA="8555c7c554f6c7e4b2e67dd644b4dc46297330c2"
 
 # strip "v" prefix if present
 VERSION="${VERSION#v}"
@@ -554,7 +554,10 @@ do_install() {
 						pkgs="$pkgs docker-compose-plugin docker-ce-rootless-extras$pkg_version"
 				fi
 				if version_gte "23.0"; then
-						pkgs="$pkgs docker-buildx-plugin docker-model-plugin"
+						pkgs="$pkgs docker-buildx-plugin"
+				fi
+				if version_gte "28.2"; then
+						pkgs="$pkgs docker-model-plugin"
 				fi
 				if ! is_dry_run; then
 					set -x
