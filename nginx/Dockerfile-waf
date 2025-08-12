@@ -86,6 +86,6 @@ RUN mkdir -p /etc/nginx/modsec/plugins \
     && ldconfig /usr/lib \
     && wget https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/v3/master/unicode.mapping -O /etc/nginx/modsec/unicode.mapping \
     && rm -rf /var/cache/apk/* \
-    && du -sh /usr/local/modsecurity/lib \
-    && strip /usr/local/modsecurity/lib/*.so* \
-    && du -sh /usr/local/modsecurity/lib
+    && du -sh /usr/lib/modsecurity/lib \
+    && strip /usr/lib/modsecurity/lib/*.so* \
+    && du -sh /usr/lib/modsecurity/lib
