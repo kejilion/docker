@@ -85,9 +85,4 @@ RUN mkdir -p /etc/nginx/modsec/plugins \
     && apk add --no-cache lua5.1 lua5.1-dev pcre pcre-dev yajl yajl-dev \
     && ldconfig /usr/lib \
     && wget https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/v3/master/unicode.mapping -O /etc/nginx/modsec/unicode.mapping \
-    && rm -rf /var/cache/apk/* \
-    && echo "Before strip:" \
-    && ls -lh /usr/lib/libmodsecurity.so* \
-    && strip /usr/lib/libmodsecurity.so* \
-    && echo "After strip:" \
-    && ls -lh /usr/lib/libmodsecurity.so*
+    && rm -rf /var/cache/apk/*
