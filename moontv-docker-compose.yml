@@ -1,0 +1,31 @@
+services:
+  moontv-core:
+    image: ghcr.io/moontechlab/lunatv:latest
+    container_name: moontv-core
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - USERNAME=admin
+      - PASSWORD=admin_password
+      - NEXT_PUBLIC_STORAGE_TYPE=kvrocks
+      - KVROCKS_URL=redis://moontv-kvrocks:6666
+    volumes:
+      - ./config:/app/config   # 配置文件保存位置
+    networks:
+      - moontv-network
+    depends_on:
+      - moontv-kvrocks
+
+  moontv-kvrocks:
+    image: apache/kvrocks
+    container_name: moontv-kvrocks
+    restart: unless-stopped
+    volumes:
+      - ./kvrocks-data:/var/lib/kvrocks
+    networks:
+      - moontv-network
+
+networks:
+  moontv-network:
+    driver: bridge
