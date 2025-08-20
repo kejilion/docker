@@ -4,28 +4,24 @@ services:
     container_name: moontv-core
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       - USERNAME=admin
       - PASSWORD=admin_password
-      - NEXT_PUBLIC_STORAGE_TYPE=kvrocks
-      - KVROCKS_URL=redis://moontv-kvrocks:6666
-    volumes:
-      - ./config:/app/config   # 配置文件保存位置
+      - NEXT_PUBLIC_STORAGE_TYPE=redis
+      - REDIS_URL=redis://moontv-redis:6379
     networks:
       - moontv-network
     depends_on:
-      - moontv-kvrocks
-
-  moontv-kvrocks:
-    image: apache/kvrocks
-    container_name: moontv-kvrocks
+      - moontv-redis
+  moontv-redis:
+    image: redis:alpine
+    container_name: moontv-redis
     restart: unless-stopped
-    volumes:
-      - ./kvrocks-data:/var/lib/kvrocks
     networks:
       - moontv-network
-
+    volumes:
+      - ./data:/data
 networks:
   moontv-network:
     driver: bridge
