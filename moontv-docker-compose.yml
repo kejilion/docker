@@ -10,6 +10,7 @@ services:
       - PASSWORD=admin_password
       - NEXT_PUBLIC_STORAGE_TYPE=redis
       - REDIS_URL=redis://moontv-redis:6379
+      - AUTH_TOKEN=shouquanma      
     networks:
       - moontv-network
     depends_on:
@@ -25,3 +26,4 @@ services:
 networks:
   moontv-network:
     driver: bridge
+
