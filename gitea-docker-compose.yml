@@ -4,7 +4,7 @@ networks:
 
 services:
   server:
-    image: docker.gitea.com/gitea:1.24.5
+    image: docker.gitea.com/gitea
     container_name: gitea
     environment:
       - USER_UID=1000
@@ -28,7 +28,7 @@ services:
       - db
 
   db:
-    image: docker.io/library/postgres:14
+    image: docker.io/library/postgres
     restart: always
     environment:
       - POSTGRES_USER=gitea
@@ -38,3 +38,4 @@ services:
       - gitea
     volumes:
       - ./postgres:/var/lib/postgresql/data
+
