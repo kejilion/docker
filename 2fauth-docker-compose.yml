@@ -1,0 +1,19 @@
+services:
+  2fauth:
+    image: 2fauth/2fauth
+    container_name: 2fauth
+    volumes:
+      - ./data:/2fauth
+    ports:
+      - 8000:8000/tcp
+    environment:
+      - APP_NAME=2FAuth
+      - APP_KEY=SomeRandomStringOf32CharsExactly
+      - APP_URL=https://yuming.com
+      - IS_DEMO_APP=false
+      - LOG_CHANNEL=daily
+      - LOG_LEVEL=notice
+      - DB_DATABASE="/srv/database/database.sqlite"
+      - CACHE_DRIVER=file
+      - SESSION_DRIVER=file
+      - AUTHENTICATION_GUARD=web-guard
