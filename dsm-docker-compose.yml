@@ -3,6 +3,8 @@ services:
     container_name: dsm
     image: vdsm/virtual-dsm
     environment:
+      CPU_CORES: "2"
+      RAM_SIZE: "2G"
       DISK_SIZE: "16G"
     devices:
       - /dev/kvm
@@ -15,3 +17,4 @@ services:
       - ./dsm:/storage
     restart: always
     stop_grace_period: 2m
+
