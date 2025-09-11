@@ -60,7 +60,7 @@ services:
       retries: 5
 
   redis:
-    image: valkey/valkey:alpine
+    image: redis:alpine
     container_name: redis
     restart: always
     volumes:
@@ -85,4 +85,5 @@ volumes:
 # networks:
 #   default:
 #     enable_ipv6: true
+
 
