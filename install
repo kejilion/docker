@@ -75,12 +75,20 @@ set -e
 #
 #   $ sudo sh install-docker.sh --mirror AzureChinaCloud
 #
+# --setup-repo
+#
+# Use the --setup-repo option to configure Docker's package repositories without
+# installing Docker packages. This is useful when you want to add the repository
+# but install packages separately:
+#
+#   $ sudo sh install-docker.sh --setup-repo
+#
 # ==============================================================================
 
 
 # Git commit from https://github.com/docker/docker-install when
 # the script was uploaded (Should only be modified by upload job):
-SCRIPT_COMMIT_SHA="30c930eeebfc0bdf50564bcda65e90588b35ec2a"
+SCRIPT_COMMIT_SHA="1ebc10ccd106153669a1e7b5984497e0fcf9d3b1"
 
 # strip "v" prefix if present
 VERSION="${VERSION#v}"
@@ -110,6 +118,7 @@ fi
 
 mirror=''
 DRY_RUN=${DRY_RUN:-}
+REPO_ONLY=${REPO_ONLY:-0}
 while [ $# -gt 0 ]; do
 	case "$1" in
 		--channel)
@@ -125,6 +134,10 @@ while [ $# -gt 0 ]; do
 			;;
 		--version)
 			VERSION="${2#v}"
+			shift
+			;;
+		--setup-repo)
+			REPO_ONLY=1
 			shift
 			;;
 		--*)
@@ -519,6 +532,11 @@ do_install() {
 				$sh_c "echo \"$apt_repo\" > /etc/apt/sources.list.d/docker.list"
 				$sh_c 'apt-get -qq update >/dev/null'
 			)
+
+			if [ "$REPO_ONLY" = "1" ]; then
+				exit 0
+			fi
+
 			pkg_version=""
 			if [ -n "$VERSION" ]; then
 				if is_dry_run; then
@@ -608,6 +626,11 @@ do_install() {
 					$sh_c "yum makecache"
 				fi
 			)
+
+			if [ "$REPO_ONLY" = "1" ]; then
+				exit 0
+			fi
+
 			pkg_version=""
 			if command_exists dnf; then
 				pkg_manager="dnf"
