@@ -28,7 +28,7 @@ services:
       - db
 
   db:
-    image: postgres:alpine
+    image: postgres:17-alpine
     restart: always
     environment:
       - POSTGRES_USER=gitea
@@ -38,6 +38,7 @@ services:
       - gitea
     volumes:
       - ./postgres:/var/lib/postgresql/data:Z
+
 
 
 
