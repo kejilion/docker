@@ -88,7 +88,7 @@ set -e
 
 # Git commit from https://github.com/docker/docker-install when
 # the script was uploaded (Should only be modified by upload job):
-SCRIPT_COMMIT_SHA="ae03142550f7efbcffc843c8f55e7d2bc9351a74"
+SCRIPT_COMMIT_SHA="c7e4dd90efd707a8e67302b967c4ef4a29d3cb6b"
 
 # strip "v" prefix if present
 VERSION="${VERSION#v}"
