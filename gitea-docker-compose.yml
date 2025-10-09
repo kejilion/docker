@@ -28,7 +28,7 @@ services:
       - db
 
   db:
-    image: docker.io/library/postgres:14
+    image: postgres:alpine
     restart: always
     environment:
       - POSTGRES_USER=gitea
@@ -38,5 +38,6 @@ services:
       - gitea
     volumes:
       - ./postgres:/var/lib/postgresql/data
+
 
 
