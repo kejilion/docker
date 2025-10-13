@@ -35,6 +35,6 @@ jobs:
           file: ./frp/Dockerfile
           push: true
           tags: kjlion/frp:alpine
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
           build-args: |
             FRP_VERSION=${{ steps.frp-version.outputs.frp_version }}
