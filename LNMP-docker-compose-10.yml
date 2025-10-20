@@ -11,7 +11,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./conf.d:/etc/nginx/conf.d
-    #  - ./stream.d:/etc/nginx/stream.d
+      - ./stream.d:/etc/nginx/stream.d
       - ./certs:/etc/nginx/certs
       - ./html:/var/www/html
       - ./log/nginx:/var/log/nginx
@@ -86,6 +86,7 @@ volumes:
 # networks:
 #   default:
 #     enable_ipv6: true
+
 
 
 
