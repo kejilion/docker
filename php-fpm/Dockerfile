@@ -9,12 +9,11 @@ RUN apk update && apk add --no-cache \
     && apk del git autoconf gcc g++ make pkgconfig \
     && rm -rf /var/cache/apk/*
 
-RUN echo "upload_max_filesize=50M" > /usr/local/etc/php/conf.d/uploads.ini \
-    && echo "post_max_size=50M" > /usr/local/etc/php/conf.d/post.ini \
+RUN echo "upload_max_filesize=100M" > /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size=100M" > /usr/local/etc/php/conf.d/post.ini \
     && echo "memory_limit=512M" > /usr/local/etc/php/conf.d/memory.ini \
     && echo "max_execution_time=1200" > /usr/local/etc/php/conf.d/max_execution_time.ini \
     && echo "max_input_time=600" > /usr/local/etc/php/conf.d/max_input_time.ini \
-    && echo "max_input_vars=3000" > /usr/local/etc/php/conf.d/max_input_vars.ini \
-    && echo "max_input_vars=5000" > /usr/local/etc/php/conf.d/max_input_vars.ini \
+    && echo "max_input_vars=10000" > /usr/local/etc/php/conf.d/max_input_vars.ini \
     && curl -o /usr/local/etc/php/conf.d/optimized_php.ini https://raw.githubusercontent.com/kejilion/sh/main/optimized_php.ini \
     && curl -o /usr/local/etc/php-fpm.d/www.conf https://raw.githubusercontent.com/kejilion/sh/main/www-1.conf
