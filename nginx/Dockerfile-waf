@@ -1,53 +1,51 @@
 FROM alpine:latest AS builder
 ARG NGINX_VERSION ZSTD_VERSION
 
-RUN apk add --no-cache pcre-dev zlib-dev openssl-dev wget git build-base brotli-dev \
+RUN apk add --no-cache --virtual .build-deps \
+    pcre-dev zlib-dev openssl-dev wget git build-base brotli-dev \
     libxml2-dev libxslt-dev curl-dev yajl-dev lmdb-dev geoip-dev lua-dev \
     automake autoconf libtool pkgconfig linux-headers pcre2-dev
 
 WORKDIR /usr/src
 
-# Download NGINX
-RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
-    && tar -zxf nginx-${NGINX_VERSION}.tar.gz
-
-# Clone Brotli module
-RUN git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli
-
-# Clone and build ModSecurity
-RUN git clone --depth 1 https://github.com/owasp-modsecurity/ModSecurity \
+# Download and build all components in single layer to reduce image size
+RUN set -eux && wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
+    && tar -zxf nginx-${NGINX_VERSION}.tar.gz \
+    && rm nginx-${NGINX_VERSION}.tar.gz \
+    && git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli \
+    && git clone --depth 1 https://github.com/owasp-modsecurity/ModSecurity \
     && cd ModSecurity \
     && git submodule init \
     && git submodule update \
     && ./build.sh \
     && ./configure \
-    && make && make install \
-    && cd ..
-
-# Clone ModSecurity NGINX module
-RUN git clone https://github.com/owasp-modsecurity/ModSecurity-nginx \
-    && cd ModSecurity-nginx \
-    # && git checkout ef64996 \
-    && cd ..
-
-# Download and build Zstandard
-RUN wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz \
+    && make -j$(nproc) && make install \
+    && cd .. \
+    && du -sh /usr/local/modsecurity/lib \
+    && strip /usr/local/modsecurity/lib/*.so* \
+    && du -sh /usr/local/modsecurity/lib \
+    && rm -rf ModSecurity/.git ModSecurity/tests \
+    && git clone --depth 1 https://github.com/owasp-modsecurity/ModSecurity-nginx \
+    && wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz \
     && tar -xzf zstd-${ZSTD_VERSION}.tar.gz \
     && cd zstd-${ZSTD_VERSION} \
     && make clean \
-    && CFLAGS="-fPIC" make && make install \
-    && cd ..
-
-# Clone Zstandard NGINX module
-RUN git clone --depth=10 https://github.com/tokers/zstd-nginx-module.git
-
-# Configure and build NGINX with modules
-RUN cd nginx-${NGINX_VERSION} && \
-    ./configure --with-compat \
+    && CFLAGS="-fPIC" make -j$(nproc) && make install \
+    && cd .. \
+    && rm -rf zstd-${ZSTD_VERSION} zstd-${ZSTD_VERSION}.tar.gz \
+    && git clone --depth=1 https://github.com/tokers/zstd-nginx-module.git \
+    && cd nginx-${NGINX_VERSION} \
+    && ./configure --with-compat \
                 --add-dynamic-module=../ngx_brotli \
                 --add-dynamic-module=../ModSecurity-nginx \
-                --add-dynamic-module=../zstd-nginx-module && \
-    make modules
+                --add-dynamic-module=../zstd-nginx-module \
+    && make -j$(nproc) modules \
+    && mkdir -p /usr/src/nginx-modules \
+    && cp objs/*.so /usr/src/nginx-modules/ \
+    && cd .. \
+    && rm -rf nginx-${NGINX_VERSION} ngx_brotli ModSecurity-nginx zstd-nginx-module \
+    && apk del --purge .build-deps \
+    && rm -rf /var/cache/apk/*
 
 
 
@@ -57,11 +55,11 @@ FROM nginx:alpine
 ARG NGINX_VERSION CORERULESET_VERSION
 
 # 复制压缩模块和 ModSecurity
-COPY --from=builder /usr/src/nginx-${NGINX_VERSION}/objs/*.so /etc/nginx/modules/
+COPY --from=builder /usr/src/nginx-modules/*.so /etc/nginx/modules/
 COPY --from=builder /usr/local/modsecurity/lib/* /usr/lib/
 
 # 创建配置目录并下载必要文件
-RUN mkdir -p /etc/nginx/modsec/plugins \
+RUN set -eux && mkdir -p /etc/nginx/modsec/plugins \
     && wget https://github.com/coreruleset/coreruleset/archive/v${CORERULESET_VERSION}.tar.gz \
     && tar -xzf v${CORERULESET_VERSION}.tar.gz --strip-components=1 -C /etc/nginx/modsec \
     && rm -f v${CORERULESET_VERSION}.tar.gz \
