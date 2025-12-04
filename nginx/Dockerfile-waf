@@ -1,4 +1,4 @@
-FROM alpine:3.2 AS builder
+FROM alpine:3.22 AS builder
 ARG NGINX_VERSION ZSTD_VERSION
 
 RUN apk add --no-cache pcre-dev zlib-dev openssl-dev wget git build-base brotli-dev \
