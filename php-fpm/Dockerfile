@@ -9,6 +9,10 @@ RUN apk update && apk add --no-cache \
     && apk del git autoconf gcc g++ make pkgconfig \
     && rm -rf /var/cache/apk/*
 
+RUN curl -sS https://getcomposer.org/installer -o composer-setup.php \
+    && php composer-setup.php --install-dir=/usr/local/bin --filename=composer \
+    && rm composer-setup.php
+
 RUN echo "upload_max_filesize=100M" > /usr/local/etc/php/conf.d/uploads.ini \
     && echo "post_max_size=100M" > /usr/local/etc/php/conf.d/post.ini \
     && echo "memory_limit=512M" > /usr/local/etc/php/conf.d/memory.ini \
