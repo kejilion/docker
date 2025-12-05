@@ -1,4 +1,4 @@
-FROM php:8.3-fpm-alpine
+FROM php:8.3-fpm-alpine3.22
 
 RUN apk update && apk add --no-cache \
     imagemagick imagemagick-dev libgomp \
