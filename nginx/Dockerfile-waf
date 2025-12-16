@@ -82,7 +82,7 @@ RUN mkdir -p /etc/nginx/modsec/plugins \
     && echo 'Include /etc/nginx/modsec/plugins/*-before.conf' >> /etc/nginx/modsec/modsecurity.conf \
     && echo 'Include /etc/nginx/modsec/rules/*.conf' >> /etc/nginx/modsec/modsecurity.conf \
     && echo 'Include /etc/nginx/modsec/plugins/*-after.conf' >> /etc/nginx/modsec/modsecurity.conf \
-    && apk add --no-cache lua5.1 lua5.1-dev pcre pcre-dev yajl yajl-dev \
+    && apk add --no-cache --no-scripts lua5.1 lua5.1-dev pcre pcre-dev yajl yajl-dev \
     && ldconfig /usr/lib \
     && wget https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/v3/master/unicode.mapping -O /etc/nginx/modsec/unicode.mapping \
     && rm -rf /var/cache/apk/*
