@@ -14,6 +14,7 @@ services:
       - ./stream.d:/etc/nginx/stream.d
       - ./certs:/etc/nginx/certs
       - ./html:/var/www/html
+      - ./letsencrypt:/var/www/letsencrypt
       - ./log/nginx:/var/log/nginx
       - php-socket-php:/run/php
       - php-socket-php74:/run/php74
@@ -86,6 +87,7 @@ volumes:
 # networks:
 #   default:
 #     enable_ipv6: true
+
 
 
 
