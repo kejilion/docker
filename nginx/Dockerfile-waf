@@ -27,11 +27,7 @@ RUN git clone --depth 1 -b v3.0.14 https://github.com/owasp-modsecurity/ModSecur
 
 # Clone ModSecurity-nginx connector
 # 最新稳定发布：v1.0.4（2025 年 5 月发布）
-RUN git clone --depth 1 -b v1.0.4 https://github.com/owasp-modsecurity/ModSecurity-nginx.git \
-    && cd ModSecurity-nginx \
-    # 无需额外 checkout，因为 v1.0.4 就是最新 tag
-    && cd .. \
-    # && rm -rf ModSecurity-nginx  # 可选：构建完成后可删除源码以减小镜像
+RUN git clone --depth 1 -b v1.0.4 https://github.com/owasp-modsecurity/ModSecurity-nginx.git
 
 
 # Download and build Zstandard
