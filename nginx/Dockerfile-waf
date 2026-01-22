@@ -31,7 +31,7 @@ RUN git clone --depth 1 -b v1.0.4 https://github.com/owasp-modsecurity/ModSecuri
     && cd ModSecurity-nginx \
     # 无需额外 checkout，因为 v1.0.4 就是最新 tag
     && cd .. \
-    && rm -rf ModSecurity-nginx  # 可选：构建完成后可删除源码以减小镜像
+    # && rm -rf ModSecurity-nginx  # 可选：构建完成后可删除源码以减小镜像
 
 
 # Download and build Zstandard
