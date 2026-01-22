@@ -14,14 +14,12 @@ RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
 # Clone Brotli module
 RUN git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli
 
-# Clone and build ModSecurity v3（libmodsecurity）
-# 最新稳定发布：v3.0.14（2025 年 2 月发布）
 RUN git clone --depth 1 -b v3.0.14 https://github.com/owasp-modsecurity/ModSecurity.git \
     && cd ModSecurity \
     && git submodule init \
     && git submodule update \
     && ./build.sh \
-    && ./configure \
+    && ./configure CXXFLAGS="-include cstdint" \
     && make -j$(nproc) \
     && make install \
     && cd .. \
