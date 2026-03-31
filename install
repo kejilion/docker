@@ -99,7 +99,7 @@ set -e
 
 # Git commit from https://github.com/docker/docker-install when
 # the script was uploaded (Should only be modified by upload job):
-SCRIPT_COMMIT_SHA="f381ee68b32e515bb4dc034b339266aff1fbc460"
+SCRIPT_COMMIT_SHA="c04fb16bb8bd8ed6ce884bb40570cbcd6101ae0c"
 
 # strip "v" prefix if present
 VERSION="${VERSION#v}"
@@ -508,7 +508,7 @@ do_install() {
 			esac
 		;;
 
-		centos|rhel)
+		centos|rhel|rocky)
 			if [ -z "$dist_version" ] && [ -r /etc/os-release ]; then
 				dist_version="$(. /etc/os-release && echo "$VERSION_ID")"
 			fi
@@ -626,7 +626,7 @@ do_install() {
 			echo_docker_as_nonroot
 			exit 0
 			;;
-		centos|fedora|rhel)
+		centos|fedora|rhel|rocky)
 			if [ "$(uname -m)" = "s390x" ]; then
 				echo "Effective v27.5, please consult RHEL distro statement for s390x support."
 				exit 1
