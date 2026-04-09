@@ -99,7 +99,7 @@ set -e
 
 # Git commit from https://github.com/docker/docker-install when
 # the script was uploaded (Should only be modified by upload job):
-SCRIPT_COMMIT_SHA="c04fb16bb8bd8ed6ce884bb40570cbcd6101ae0c"
+SCRIPT_COMMIT_SHA="8fb5881103ac6f2fb404605d6d5b1f84244f3896"
 
 # strip "v" prefix if present
 VERSION="${VERSION#v}"
@@ -418,7 +418,7 @@ check_forked() {
 do_install() {
 	echo "# Executing docker install script, commit: $SCRIPT_COMMIT_SHA"
 
-	if command_exists docker; then
+	if [ "$REPO_ONLY" != "1" ] && command_exists docker; then
 		cat >&2 <<-'EOF'
 			Warning: the "docker" command appears to already exist on this system.
 
