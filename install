@@ -99,7 +99,7 @@ set -e
 
 # Git commit from https://github.com/docker/docker-install when
 # the script was uploaded (Should only be modified by upload job):
-SCRIPT_COMMIT_SHA="8822028d964f62fc5221d8c406ffdcccde7aa000"
+SCRIPT_COMMIT_SHA="f2b0ef96e1f2a34340caf3c72a0a727aa0c48ec7"
 
 # strip "v" prefix if present
 VERSION="${VERSION#v}"
@@ -301,7 +301,7 @@ start_docker_daemon() {
 		is_dry_run || >&2 echo "Using systemd to manage Docker service"
 		if (
 			is_dry_run || set -x
-			$sh_c systemctl enable --now docker.service 2>/dev/null
+			$sh_c "systemctl enable --now docker.service 2>/dev/null"
 		); then
 			is_dry_run || echo "INFO: Docker daemon enabled and started" >&2
 		else
