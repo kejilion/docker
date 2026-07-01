@@ -99,7 +99,7 @@ set -e
 
 # Git commit from https://github.com/docker/docker-install when
 # the script was uploaded (Should only be modified by upload job):
-SCRIPT_COMMIT_SHA="153e238e1d876160ea4a2a1844ca7f2983bbdd5e"
+SCRIPT_COMMIT_SHA="60d4787004fea99ea3b3b4a92836144c3119ad33"
 
 # strip "v" prefix if present
 VERSION="${VERSION#v}"
@@ -290,6 +290,12 @@ get_distribution() {
 	if [ -r /etc/os-release ]; then
 		lsb_dist="$(. /etc/os-release && echo "$ID")"
 	fi
+
+	# Normalize Fedora Asahi Remix to fedora
+	if [ "$lsb_dist" = "fedora-asahi-remix" ]; then
+		lsb_dist="fedora"
+	fi
+
 	# Returning an empty string here should be alright since the
 	# case statements don't act unless you provide an actual value
 	echo "$lsb_dist"
@@ -557,7 +563,12 @@ do_install() {
 	case "$lsb_dist" in
 		ubuntu|debian|raspbian)
 			pre_reqs="ca-certificates curl"
-			apt_repo="deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] $DOWNLOAD_URL/linux/$lsb_dist $dist_version $CHANNEL"
+			apt_repo_lsb_dist="$lsb_dist"
+			# Docker does not publish a Raspbian Trixie repo; use Debian Trixie instead.
+			if [ "$lsb_dist" = "raspbian" ] && [ "$dist_version" = "trixie" ]; then
+				apt_repo_lsb_dist="debian"
+			fi
+			apt_repo="deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] $DOWNLOAD_URL/linux/$apt_repo_lsb_dist $dist_version $CHANNEL"
 			(
 				if ! is_dry_run; then
 					set -x
@@ -565,7 +576,7 @@ do_install() {
 				$sh_c 'apt-get -qq update >/dev/null'
 				$sh_c "DEBIAN_FRONTEND=noninteractive apt-get -y -qq install $pre_reqs >/dev/null"
 				$sh_c 'install -m 0755 -d /etc/apt/keyrings'
-				$sh_c "curl -fsSL \"$DOWNLOAD_URL/linux/$lsb_dist/gpg\" -o /etc/apt/keyrings/docker.asc"
+				$sh_c "curl -fsSL \"$DOWNLOAD_URL/linux/$apt_repo_lsb_dist/gpg\" -o /etc/apt/keyrings/docker.asc"
 				$sh_c "chmod a+r /etc/apt/keyrings/docker.asc"
 				$sh_c "echo \"$apt_repo\" > /etc/apt/sources.list.d/docker.list"
 				$sh_c 'apt-get -qq update >/dev/null'
