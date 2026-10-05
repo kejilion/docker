@@ -2,7 +2,8 @@ ARG NGINX_VERSION
 ARG MODSECURITY_VERSION
 
 FROM alpine:latest AS builder
-ARG NGINX_VERSION ZSTD_VERSION MODSECURITY_VERSION
+ARG NGINX_VERSION ZSTD_VERSION MODSECURITY_VERSION MODSECURITY_NGINX_VERSION
+ARG NGX_BROTLI_REF ZSTD_NGINX_MODULE_REF
 
 RUN apk add --no-cache pcre-dev zlib-dev openssl-dev wget git build-base brotli-dev \
     libxml2-dev libxslt-dev curl-dev yajl-dev lmdb-dev geoip-dev lua-dev \
@@ -14,8 +15,13 @@ WORKDIR /usr/src
 RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && tar -zxf nginx-${NGINX_VERSION}.tar.gz
 
-# Clone Brotli module
-RUN git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli
+# Resolve the latest module commit in the workflow, then build from that exact snapshot.
+RUN git init ngx_brotli \
+    && cd ngx_brotli \
+    && git remote add origin https://github.com/google/ngx_brotli.git \
+    && git fetch --depth 1 origin ${NGX_BROTLI_REF} \
+    && git checkout --detach FETCH_HEAD \
+    && git submodule update --init --recursive --depth 1
 
 RUN git clone --depth 1 -b v${MODSECURITY_VERSION} https://github.com/owasp-modsecurity/ModSecurity.git \
     && cd ModSecurity \
@@ -28,9 +34,8 @@ RUN git clone --depth 1 -b v${MODSECURITY_VERSION} https://github.com/owasp-mods
     && cd .. \
     && rm -rf ModSecurity
 
-# Clone ModSecurity-nginx connector
-# 最新稳定发布：v1.0.4（2025 年 5 月发布）
-RUN git clone --depth 1 -b v1.0.4 https://github.com/owasp-modsecurity/ModSecurity-nginx.git
+# Clone the latest ModSecurity-nginx connector release resolved by the workflow.
+RUN git clone --depth 1 -b v${MODSECURITY_NGINX_VERSION} https://github.com/owasp-modsecurity/ModSecurity-nginx.git
 
 
 # Download and build Zstandard
@@ -41,8 +46,12 @@ RUN wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zst
     && CFLAGS="-fPIC" make && make install \
     && cd ..
 
-# Clone Zstandard NGINX module
-RUN git clone --depth=10 https://github.com/tokers/zstd-nginx-module.git
+# Build the Zstandard NGINX module from the exact commit resolved by the workflow.
+RUN git init zstd-nginx-module \
+    && cd zstd-nginx-module \
+    && git remote add origin https://github.com/tokers/zstd-nginx-module.git \
+    && git fetch --depth 1 origin ${ZSTD_NGINX_MODULE_REF} \
+    && git checkout --detach FETCH_HEAD
 
 # Configure and build NGINX with modules
 RUN cd nginx-${NGINX_VERSION} && \
@@ -58,6 +67,7 @@ RUN cd nginx-${NGINX_VERSION} && \
 
 FROM nginx:${NGINX_VERSION}-alpine
 ARG NGINX_VERSION CORERULESET_VERSION MODSECURITY_VERSION
+ARG WORDPRESS_PLUGIN_REF LDNMP_RULES_REF
 
 # 复制压缩模块和 ModSecurity
 COPY --from=builder /usr/src/nginx-${NGINX_VERSION}/objs/*.so /etc/nginx/modules/
@@ -68,9 +78,9 @@ RUN mkdir -p /etc/nginx/modsec/plugins \
     && wget https://github.com/coreruleset/coreruleset/archive/v${CORERULESET_VERSION}.tar.gz \
     && tar -xzf v${CORERULESET_VERSION}.tar.gz --strip-components=1 -C /etc/nginx/modsec \
     && rm -f v${CORERULESET_VERSION}.tar.gz \
-    && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/master/plugins/wordpress-rule-exclusions-before.conf \
-    && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/master/plugins/wordpress-rule-exclusions-config.conf \
-    && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/kejilion/nginx/main/waf/ldnmp-before.conf \
+    && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/${WORDPRESS_PLUGIN_REF}/plugins/wordpress-rule-exclusions-before.conf \
+    && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/${WORDPRESS_PLUGIN_REF}/plugins/wordpress-rule-exclusions-config.conf \
+    && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/kejilion/nginx/${LDNMP_RULES_REF}/waf/ldnmp-before.conf \
     && cp /etc/nginx/modsec/crs-setup.conf.example /etc/nginx/modsec/crs-setup.conf \
     && sed -i '/id:900110/,/setvar:tx.outbound_anomaly_score_threshold/s/^#//' /etc/nginx/modsec/crs-setup.conf \
     && sed -i -e '$!N;s/^#\(SecAction.*\n.*id:900110\)/\1/;P;D' /etc/nginx/modsec/crs-setup.conf \
