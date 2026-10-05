@@ -28,6 +28,7 @@ jobs:
         run: |
           # echo "NGINX_VERSION=$(curl -s https://api.github.com/repos/nginx/nginx/releases/latest | grep -oP '"tag_name": "\K[^"]+' | sed 's/release-//')" >> $GITHUB_ENV
           echo "NGINX_VERSION=1.31.1" >> $GITHUB_ENV
+          echo "MODSECURITY_VERSION=3.0.17" >> $GITHUB_ENV
           echo "ZSTD_VERSION=$(curl -s https://api.github.com/repos/facebook/zstd/releases/latest | grep -oP '"tag_name": "\K[^"]+' | sed 's/v//')" >> $GITHUB_ENV
           echo "CORERULESET_VERSION=4.26.0" >> $GITHUB_ENV
           # echo "CORERULESET_VERSION=$(curl -s https://api.github.com/repos/coreruleset/coreruleset/releases/latest | grep -oP '"tag_name": "\K[^"]+' | sed 's/v//')" >> $GITHUB_ENV
@@ -43,5 +44,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           build-args: |
             NGINX_VERSION=${{ env.NGINX_VERSION }}
+            MODSECURITY_VERSION=${{ env.MODSECURITY_VERSION }}
             ZSTD_VERSION=${{ env.ZSTD_VERSION }}
             CORERULESET_VERSION=${{ env.CORERULESET_VERSION }}
