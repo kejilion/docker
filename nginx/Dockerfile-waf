@@ -25,8 +25,7 @@ RUN git init ngx_brotli \
 
 RUN git clone --depth 1 -b v${MODSECURITY_VERSION} https://github.com/owasp-modsecurity/ModSecurity.git \
     && cd ModSecurity \
-    && git submodule init \
-    && git submodule update \
+    && git submodule update --init --recursive \
     && ./build.sh \
     && ./configure CXXFLAGS="-include cstdint" \
     && make -j$(nproc) \
