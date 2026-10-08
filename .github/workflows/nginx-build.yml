@@ -6,6 +6,9 @@ on:
   schedule:
     - cron: '0 0 1 * *'  # 每个月的1号00:00（UTC时间）
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,18 +26,76 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Get latest versions
-        id: get_versions
+      - name: Resolve latest component versions
+        id: versions
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          echo "NGINX_VERSION=$(curl -s https://api.github.com/repos/nginx/nginx/releases/latest | grep -oP '"tag_name": "\K[^"]+' | sed 's/release-//')" >> $GITHUB_ENV
-          # echo "NGINX_VERSION=1.31.5" >> $GITHUB_ENV
-          echo "ZSTD_VERSION=$(curl -s https://api.github.com/repos/facebook/zstd/releases/latest | grep -oP '"tag_name": "\K[^"]+' | sed 's/v//')" >> $GITHUB_ENV
-          # echo "CORERULESET_VERSION=4.29.0" >> $GITHUB_ENV
-          echo "CORERULESET_VERSION=$(curl -s https://api.github.com/repos/coreruleset/coreruleset/releases/latest | grep -oP '"tag_name": "\K[^"]+' | sed 's/v//')" >> $GITHUB_ENV
+          set -euo pipefail
+
+          github_api() {
+            curl --retry 3 --retry-all-errors --connect-timeout 10 --max-time 60 -fsSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/$1"
+          }
+
+          latest_release_tag() {
+            github_api "repos/$1/releases/latest" | jq -er '.tag_name'
+          }
+
+          latest_default_branch_sha() {
+            local repo="$1"
+            local default_branch
+            default_branch="$(github_api "repos/${repo}" | jq -er '.default_branch')"
+            github_api "repos/${repo}/commits/${default_branch}" | jq -er '.sha'
+          }
+
+          normalize_version() {
+            printf '%s\n' "$1" | sed -E 's/^(release-|v)//'
+          }
+
+          NGINX_VERSION="$(normalize_version "$(latest_release_tag nginx/nginx)")"
+          MODSECURITY_VERSION="$(normalize_version "$(latest_release_tag owasp-modsecurity/ModSecurity)")"
+          MODSECURITY_NGINX_VERSION="$(normalize_version "$(latest_release_tag owasp-modsecurity/ModSecurity-nginx)")"
+          ZSTD_VERSION="$(normalize_version "$(latest_release_tag facebook/zstd)")"
+          CORERULESET_VERSION="$(normalize_version "$(latest_release_tag coreruleset/coreruleset)")"
+          NGX_BROTLI_REF="$(latest_default_branch_sha google/ngx_brotli)"
+          ZSTD_NGINX_MODULE_REF="$(latest_default_branch_sha tokers/zstd-nginx-module)"
+          WORDPRESS_PLUGIN_REF="$(latest_default_branch_sha coreruleset/wordpress-rule-exclusions-plugin)"
+          LDNMP_RULES_REF="$(latest_default_branch_sha kejilion/nginx)"
+
+          {
+            echo "nginx_version=${NGINX_VERSION}"
+            echo "modsecurity_version=${MODSECURITY_VERSION}"
+            echo "modsecurity_nginx_version=${MODSECURITY_NGINX_VERSION}"
+            echo "zstd_version=${ZSTD_VERSION}"
+            echo "coreruleset_version=${CORERULESET_VERSION}"
+            echo "ngx_brotli_ref=${NGX_BROTLI_REF}"
+            echo "zstd_nginx_module_ref=${ZSTD_NGINX_MODULE_REF}"
+            echo "wordpress_plugin_ref=${WORDPRESS_PLUGIN_REF}"
+            echo "ldnmp_rules_ref=${LDNMP_RULES_REF}"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Resolved NGINX image components"
+            echo
+            echo "- NGINX: ${NGINX_VERSION}"
+            echo "- ModSecurity: ${MODSECURITY_VERSION}"
+            echo "- ModSecurity-nginx: ${MODSECURITY_NGINX_VERSION}"
+            echo "- OWASP CRS: ${CORERULESET_VERSION}"
+            echo "- Zstandard: ${ZSTD_VERSION}"
+            echo "- ngx_brotli: ${NGX_BROTLI_REF}"
+            echo "- zstd-nginx-module: ${ZSTD_NGINX_MODULE_REF}"
+            echo "- WordPress CRS plugin: ${WORDPRESS_PLUGIN_REF}"
+            echo "- LDNMP rules: ${LDNMP_RULES_REF}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
 
       - name: Build and push NGINX image 
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: nginx/Dockerfile-waf
@@ -42,6 +103,12 @@ jobs:
           tags: kjlion/nginx:alpine
           platforms: linux/amd64,linux/arm64
           build-args: |
-            NGINX_VERSION=${{ env.NGINX_VERSION }}
-            ZSTD_VERSION=${{ env.ZSTD_VERSION }}
-            CORERULESET_VERSION=${{ env.CORERULESET_VERSION }}
+            NGINX_VERSION=${{ steps.versions.outputs.nginx_version }}
+            MODSECURITY_VERSION=${{ steps.versions.outputs.modsecurity_version }}
+            MODSECURITY_NGINX_VERSION=${{ steps.versions.outputs.modsecurity_nginx_version }}
+            ZSTD_VERSION=${{ steps.versions.outputs.zstd_version }}
+            CORERULESET_VERSION=${{ steps.versions.outputs.coreruleset_version }}
+            NGX_BROTLI_REF=${{ steps.versions.outputs.ngx_brotli_ref }}
+            ZSTD_NGINX_MODULE_REF=${{ steps.versions.outputs.zstd_nginx_module_ref }}
+            WORDPRESS_PLUGIN_REF=${{ steps.versions.outputs.wordpress_plugin_ref }}
+            LDNMP_RULES_REF=${{ steps.versions.outputs.ldnmp_rules_ref }}

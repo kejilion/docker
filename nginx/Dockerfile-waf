@@ -1,5 +1,9 @@
+ARG NGINX_VERSION
+ARG MODSECURITY_VERSION
+
 FROM alpine:latest AS builder
-ARG NGINX_VERSION ZSTD_VERSION
+ARG NGINX_VERSION ZSTD_VERSION MODSECURITY_VERSION MODSECURITY_NGINX_VERSION
+ARG NGX_BROTLI_REF ZSTD_NGINX_MODULE_REF
 
 RUN apk add --no-cache pcre-dev zlib-dev openssl-dev wget git build-base brotli-dev \
     libxml2-dev libxslt-dev curl-dev yajl-dev lmdb-dev geoip-dev lua-dev \
@@ -11,10 +15,15 @@ WORKDIR /usr/src
 RUN wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
     && tar -zxf nginx-${NGINX_VERSION}.tar.gz
 
-# Clone Brotli module
-RUN git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli
+# Resolve the latest module commit in the workflow, then build from that exact snapshot.
+RUN git init ngx_brotli \
+    && cd ngx_brotli \
+    && git remote add origin https://github.com/google/ngx_brotli.git \
+    && git fetch --depth 1 origin ${NGX_BROTLI_REF} \
+    && git checkout --detach FETCH_HEAD \
+    && git submodule update --init --recursive --depth 1
 
-RUN git clone --depth 1 -b v3.0.14 https://github.com/owasp-modsecurity/ModSecurity.git \
+RUN git clone --depth 1 -b v${MODSECURITY_VERSION} https://github.com/owasp-modsecurity/ModSecurity.git \
     && cd ModSecurity \
     && git submodule init \
     && git submodule update \
@@ -25,9 +34,8 @@ RUN git clone --depth 1 -b v3.0.14 https://github.com/owasp-modsecurity/ModSecur
     && cd .. \
     && rm -rf ModSecurity
 
-# Clone ModSecurity-nginx connector
-# 最新稳定发布：v1.0.4（2025 年 5 月发布）
-RUN git clone --depth 1 -b v1.0.4 https://github.com/owasp-modsecurity/ModSecurity-nginx.git
+# Clone the latest ModSecurity-nginx connector release resolved by the workflow.
+RUN git clone --depth 1 -b v${MODSECURITY_NGINX_VERSION} https://github.com/owasp-modsecurity/ModSecurity-nginx.git
 
 
 # Download and build Zstandard
@@ -38,8 +46,12 @@ RUN wget https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zst
     && CFLAGS="-fPIC" make && make install \
     && cd ..
 
-# Clone Zstandard NGINX module
-RUN git clone --depth=10 https://github.com/tokers/zstd-nginx-module.git
+# Build the Zstandard NGINX module from the exact commit resolved by the workflow.
+RUN git init zstd-nginx-module \
+    && cd zstd-nginx-module \
+    && git remote add origin https://github.com/tokers/zstd-nginx-module.git \
+    && git fetch --depth 1 origin ${ZSTD_NGINX_MODULE_REF} \
+    && git checkout --detach FETCH_HEAD
 
 # Configure and build NGINX with modules
 RUN cd nginx-${NGINX_VERSION} && \
@@ -53,8 +65,9 @@ RUN cd nginx-${NGINX_VERSION} && \
 
 
 
-FROM nginx:alpine
-ARG NGINX_VERSION CORERULESET_VERSION
+FROM nginx:${NGINX_VERSION}-alpine
+ARG NGINX_VERSION CORERULESET_VERSION MODSECURITY_VERSION
+ARG WORDPRESS_PLUGIN_REF LDNMP_RULES_REF
 
 # 复制压缩模块和 ModSecurity
 COPY --from=builder /usr/src/nginx-${NGINX_VERSION}/objs/*.so /etc/nginx/modules/
@@ -65,15 +78,15 @@ RUN mkdir -p /etc/nginx/modsec/plugins \
     && wget https://github.com/coreruleset/coreruleset/archive/v${CORERULESET_VERSION}.tar.gz \
     && tar -xzf v${CORERULESET_VERSION}.tar.gz --strip-components=1 -C /etc/nginx/modsec \
     && rm -f v${CORERULESET_VERSION}.tar.gz \
-    && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/master/plugins/wordpress-rule-exclusions-before.conf \
-    && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/master/plugins/wordpress-rule-exclusions-config.conf \
-    && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/kejilion/nginx/main/waf/ldnmp-before.conf \
+    && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/${WORDPRESS_PLUGIN_REF}/plugins/wordpress-rule-exclusions-before.conf \
+    && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/coreruleset/wordpress-rule-exclusions-plugin/${WORDPRESS_PLUGIN_REF}/plugins/wordpress-rule-exclusions-config.conf \
+    && wget -P /etc/nginx/modsec/plugins https://raw.githubusercontent.com/kejilion/nginx/${LDNMP_RULES_REF}/waf/ldnmp-before.conf \
     && cp /etc/nginx/modsec/crs-setup.conf.example /etc/nginx/modsec/crs-setup.conf \
     && sed -i '/id:900110/,/setvar:tx.outbound_anomaly_score_threshold/s/^#//' /etc/nginx/modsec/crs-setup.conf \
     && sed -i -e '$!N;s/^#\(SecAction.*\n.*id:900110\)/\1/;P;D' /etc/nginx/modsec/crs-setup.conf \
     && sed -i 's/setvar:tx.inbound_anomaly_score_threshold=5/setvar:tx.inbound_anomaly_score_threshold=30/' /etc/nginx/modsec/crs-setup.conf \
     && sed -i 's/setvar:tx.outbound_anomaly_score_threshold=4/setvar:tx.outbound_anomaly_score_threshold=16/' /etc/nginx/modsec/crs-setup.conf \
-    && wget https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/v3/master/modsecurity.conf-recommended -O /etc/nginx/modsec/modsecurity.conf \
+    && wget https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/v${MODSECURITY_VERSION}/modsecurity.conf-recommended -O /etc/nginx/modsec/modsecurity.conf \
     && sed -i 's/SecRuleEngine DetectionOnly/SecRuleEngine On/' /etc/nginx/modsec/modsecurity.conf \
     && sed -i 's/SecPcreMatchLimit [0-9]\+/SecPcreMatchLimit 20000/' /etc/nginx/modsec/modsecurity.conf \
     && sed -i 's/SecPcreMatchLimitRecursion [0-9]\+/SecPcreMatchLimitRecursion 20000/' /etc/nginx/modsec/modsecurity.conf \
@@ -87,5 +100,16 @@ RUN mkdir -p /etc/nginx/modsec/plugins \
     && echo 'Include /etc/nginx/modsec/plugins/*-after.conf' >> /etc/nginx/modsec/modsecurity.conf \
     && apk add --no-cache --no-scripts lua5.1 lua5.1-dev pcre pcre-dev yajl yajl-dev \
     && ldconfig /usr/lib \
-    && wget https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/v3/master/unicode.mapping -O /etc/nginx/modsec/unicode.mapping \
+    && wget https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/v${MODSECURITY_VERSION}/unicode.mapping -O /etc/nginx/modsec/unicode.mapping \
     && rm -rf /var/cache/apk/*
+
+# Load the WAF rules before publishing, so incompatible engines/configs fail the build.
+RUN printf '%s\n' \
+        'load_module /etc/nginx/modules/ngx_http_modsecurity_module.so;' \
+        'events {}' \
+        'http {' \
+        '    modsecurity on;' \
+        '    modsecurity_rules_file /etc/nginx/modsec/modsecurity.conf;' \
+        '}' > /tmp/nginx-waf-test.conf \
+    && nginx -t -c /tmp/nginx-waf-test.conf \
+    && rm -f /tmp/nginx-waf-test.conf
