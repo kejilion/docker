@@ -106,7 +106,7 @@ set -e
 
 # Git commit from https://github.com/docker/docker-install when
 # the script was uploaded (Should only be modified by upload job):
-SCRIPT_COMMIT_SHA="2b32480025b223ebfddae9a3a8bef09027680f53"
+SCRIPT_COMMIT_SHA="ada7a567e59b3935bd601bb21e422da50e80e376"
 
 # strip "v" prefix if present
 VERSION="${VERSION#v}"
@@ -507,7 +507,10 @@ do_install() {
 	case "$lsb_dist" in
 
 		ubuntu)
-			if command_exists lsb_release; then
+			if [ -r /etc/os-release ]; then
+				dist_version="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+			fi
+			if [ -z "$dist_version" ] && command_exists lsb_release; then
 				dist_version="$(lsb_release --codename | cut -f2)"
 			fi
 			if [ -z "$dist_version" ] && [ -r /etc/lsb-release ]; then
