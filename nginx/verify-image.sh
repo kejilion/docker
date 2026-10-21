@@ -15,9 +15,9 @@ docker run --rm --entrypoint nginx "$image" -V
 version="$(docker run --rm --entrypoint nginx "$image" -v 2>&1)"
 test "$version" = "nginx version: nginx/$expected_version"
 
-# Loading every module checks both its NGINX ABI and its runtime libraries.
+# Load the custom modules; the base image also ships debug variants of its own.
 docker run --rm --entrypoint sh "$image" -ec \
-  'for module in /etc/nginx/modules/*.so; do printf "load_module %s;\n" "$module"; done' \
+  'for module in ngx_http_brotli_filter_module ngx_http_brotli_static_module ngx_http_modsecurity_module ngx_http_zstd_filter_module ngx_http_zstd_static_module; do printf "load_module /etc/nginx/modules/%s.so;\n" "$module"; done' \
   > "$test_dir/nginx.conf"
 cat >> "$test_dir/nginx.conf" <<'EOF'
 events {}
