@@ -1,5 +1,12 @@
 FROM php:7.4-fpm-alpine
 
+# Use prepare-php74-security-build.py to build the official source backport first.
+RUN test "$PHP_SECURITY_BACKPORT" = 712e60f9edfd03f0960fc4fc3c2c375f42b90aa2 \
+    && php -r 'if (PHP_VERSION_ID !== 70433 || ini_get("max_multipart_body_parts") === false) { fwrite(STDERR, "The official PHP 7.4 security backport is required\n"); exit(1); }'
+
+LABEL io.kejilion.php.security-backport="712e60f9edfd03f0960fc4fc3c2c375f42b90aa2" \
+      io.kejilion.php.security-cves="CVE-2026-109618,CVE-2026-109619"
+
 RUN apk update && apk add --no-cache \
     imagemagick imagemagick-dev libgomp \
     git autoconf gcc g++ make pkgconfig \
@@ -10,7 +17,7 @@ RUN apk update && apk add --no-cache \
     && apk del git autoconf gcc g++ make pkgconfig \
     && rm -rf /var/cache/apk/*
 
-RUN curl -sS https://getcomposer.org/installer -o composer-setup.php \
+RUN curl -fsSL https://getcomposer.org/installer -o composer-setup.php \
     && php composer-setup.php --install-dir=/usr/local/bin --filename=composer \
     && rm composer-setup.php
 
@@ -20,5 +27,5 @@ RUN echo "upload_max_filesize=100M" > /usr/local/etc/php/conf.d/uploads.ini \
     && echo "max_execution_time=1200" > /usr/local/etc/php/conf.d/max_execution_time.ini \
     && echo "max_input_time=600" > /usr/local/etc/php/conf.d/max_input_time.ini \
     && echo "max_input_vars=10000" > /usr/local/etc/php/conf.d/max_input_vars.ini \
-    && curl -o /usr/local/etc/php/conf.d/optimized_php.ini https://raw.githubusercontent.com/kejilion/sh/main/optimized_php.ini \
-    && curl -o /usr/local/etc/php-fpm.d/www.conf https://raw.githubusercontent.com/kejilion/sh/main/www-1.conf
+    && curl -fsSL -o /usr/local/etc/php/conf.d/optimized_php.ini https://raw.githubusercontent.com/kejilion/sh/main/optimized_php.ini \
+    && curl -fsSL -o /usr/local/etc/php-fpm.d/www.conf https://raw.githubusercontent.com/kejilion/sh/main/www-1.conf
