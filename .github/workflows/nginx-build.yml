@@ -237,4 +237,4 @@ jobs:
             -t kjlion/nginx:alpine \
             "kjlion/nginx:build-${GITHUB_RUN_ID}-amd64" \
             "kjlion/nginx:build-${GITHUB_RUN_ID}-arm64"
-          docker buildx imagetools inspect kjlion/nginx:fpm-alpine
+          docker buildx imagetools inspect kjlion/nginx:alpine
