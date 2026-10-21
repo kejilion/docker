@@ -40,7 +40,7 @@ docker run --rm --entrypoint nginx \
 docker run --detach --name "$container" -p 127.0.0.1::80 \
   -v "$test_dir/nginx.conf:/etc/nginx/nginx.conf:ro" "$image"
 address="http://$(docker port "$container" 80/tcp)"
-if ! curl --retry 10 --retry-connrefused --retry-delay 1 -fsS "$address/" -o /dev/null; then
+if ! curl --retry 10 --retry-all-errors --retry-delay 1 -fsS "$address/" -o /dev/null; then
   docker logs "$container"
   exit 1
 fi
