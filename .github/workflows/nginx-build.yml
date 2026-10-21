@@ -1,31 +1,42 @@
-
-name: Publish NGINX Image 
+name: Publish NGINX Image
 
 on:
-  workflow_dispatch:   # 手动触发
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish verified images to Docker Hub
+        type: boolean
+        default: false
+      verified_run_id:
+        description: Reuse verified artifacts from a successful run of this exact commit
+        type: string
+        default: ''
   schedule:
-    - cron: '0 0 1 * *'  # 每个月的1号00:00（UTC时间）
+    - cron: '0 0 1 * *'  # 每月 1 日 00:00 UTC
 
 permissions:
   contents: read
+  actions: read
+
+concurrency:
+  group: nginx-build-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
+  resolve:
+    if: inputs.verified_run_id == ''
+    runs-on: ubuntu-24.04
+    outputs:
+      nginx_version: ${{ steps.versions.outputs.nginx_version }}
+      modsecurity_version: ${{ steps.versions.outputs.modsecurity_version }}
+      modsecurity_nginx_version: ${{ steps.versions.outputs.modsecurity_nginx_version }}
+      zstd_version: ${{ steps.versions.outputs.zstd_version }}
+      coreruleset_version: ${{ steps.versions.outputs.coreruleset_version }}
+      ngx_brotli_ref: ${{ steps.versions.outputs.ngx_brotli_ref }}
+      zstd_nginx_module_ref: ${{ steps.versions.outputs.zstd_nginx_module_ref }}
+      wordpress_plugin_ref: ${{ steps.versions.outputs.wordpress_plugin_ref }}
+      ldnmp_rules_ref: ${{ steps.versions.outputs.ldnmp_rules_ref }}
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
       - name: Resolve latest component versions
         id: versions
         shell: bash
@@ -94,21 +105,136 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
 
-      - name: Build and push NGINX image 
+
+  build:
+    if: inputs.verified_run_id == ''
+    needs: resolve
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build NGINX image
         uses: docker/build-push-action@v7
         with:
           context: .
           file: nginx/Dockerfile-waf
-          push: true
-          tags: kjlion/nginx:alpine
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/${{ matrix.arch }}
+          pull: true
+          no-cache: true
+          load: true
+          push: false
+          tags: local/nginx:verified-${{ matrix.arch }}
           build-args: |
-            NGINX_VERSION=${{ steps.versions.outputs.nginx_version }}
-            MODSECURITY_VERSION=${{ steps.versions.outputs.modsecurity_version }}
-            MODSECURITY_NGINX_VERSION=${{ steps.versions.outputs.modsecurity_nginx_version }}
-            ZSTD_VERSION=${{ steps.versions.outputs.zstd_version }}
-            CORERULESET_VERSION=${{ steps.versions.outputs.coreruleset_version }}
-            NGX_BROTLI_REF=${{ steps.versions.outputs.ngx_brotli_ref }}
-            ZSTD_NGINX_MODULE_REF=${{ steps.versions.outputs.zstd_nginx_module_ref }}
-            WORDPRESS_PLUGIN_REF=${{ steps.versions.outputs.wordpress_plugin_ref }}
-            LDNMP_RULES_REF=${{ steps.versions.outputs.ldnmp_rules_ref }}
+            NGINX_VERSION=${{ needs.resolve.outputs.nginx_version }}
+            MODSECURITY_VERSION=${{ needs.resolve.outputs.modsecurity_version }}
+            MODSECURITY_NGINX_VERSION=${{ needs.resolve.outputs.modsecurity_nginx_version }}
+            ZSTD_VERSION=${{ needs.resolve.outputs.zstd_version }}
+            CORERULESET_VERSION=${{ needs.resolve.outputs.coreruleset_version }}
+            NGX_BROTLI_REF=${{ needs.resolve.outputs.ngx_brotli_ref }}
+            ZSTD_NGINX_MODULE_REF=${{ needs.resolve.outputs.zstd_nginx_module_ref }}
+            WORDPRESS_PLUGIN_REF=${{ needs.resolve.outputs.wordpress_plugin_ref }}
+            LDNMP_RULES_REF=${{ needs.resolve.outputs.ldnmp_rules_ref }}
+
+      - name: Verify NGINX modules, HTTP and WAF
+        env:
+          IMAGE: local/nginx:verified-${{ matrix.arch }}
+          NGINX_VERSION: ${{ needs.resolve.outputs.nginx_version }}
+          COMPONENTS: ${{ toJSON(needs.resolve.outputs) }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash nginx/verify-image.sh "$IMAGE" "$NGINX_VERSION"
+          mkdir -p "$RUNNER_TEMP/nginx-artifact"
+          printf '%s' "$NGINX_VERSION" > "$RUNNER_TEMP/nginx-artifact/version.txt"
+          printf '%s\n' "$COMPONENTS" > "$RUNNER_TEMP/nginx-artifact/components.json"
+          docker save "$IMAGE" -o "$RUNNER_TEMP/nginx-artifact/image.tar"
+          echo "### Verified NGINX $NGINX_VERSION / ${{ matrix.arch }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "All modules, configuration, HTTP and WAF checks passed." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save verified image
+        uses: actions/upload-artifact@v4
+        with:
+          name: nginx-verified-${{ matrix.arch }}
+          path: ${{ runner.temp }}/nginx-artifact/
+          retention-days: 3
+          compression-level: 1
+
+  publish:
+    if: >-
+      always() &&
+      (needs.build.result == 'success' || (needs.build.result == 'skipped' && inputs.verified_run_id != '')) &&
+      (github.event_name == 'schedule' || inputs.publish == true)
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate source run before reusing artifacts
+        if: inputs.verified_run_id != ''
+        uses: actions/github-script@v7
+        env:
+          VERIFIED_RUN_ID: ${{ inputs.verified_run_id }}
+        with:
+          script: |
+            if (!/^[0-9]+$/.test(process.env.VERIFIED_RUN_ID)) {
+              throw new Error('Invalid verified run ID');
+            }
+            const params = { owner: context.repo.owner, repo: context.repo.repo };
+            const source = (await github.rest.actions.getWorkflowRun({
+              ...params, run_id: Number(process.env.VERIFIED_RUN_ID)
+            })).data;
+            const current = (await github.rest.actions.getWorkflowRun({
+              ...params, run_id: context.runId
+            })).data;
+            if (source.conclusion !== 'success' || source.head_sha !== context.sha ||
+                source.workflow_id !== current.workflow_id ||
+                source.head_repository?.full_name !== `${context.repo.owner}/${context.repo.repo}`) {
+              throw new Error('Artifacts must come from a successful run of this workflow and exact commit');
+            }
+
+      - name: Download verified images
+        uses: actions/download-artifact@v4
+        with:
+          pattern: nginx-verified-*
+          path: images
+          run-id: ${{ inputs.verified_run_id || github.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Publish verified images and multi-platform manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(cat images/nginx-verified-amd64/version.txt)"
+          test "$version" = "$(cat images/nginx-verified-arm64/version.txt)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          for arch in amd64 arm64; do
+            docker load -i "images/nginx-verified-$arch/image.tar"
+            docker tag "local/nginx:verified-$arch" "kjlion/nginx:build-${GITHUB_RUN_ID}-$arch"
+            docker push "kjlion/nginx:build-${GITHUB_RUN_ID}-$arch"
+          done
+          docker buildx imagetools create \
+            -t "kjlion/nginx:${version}-alpine" \
+            -t kjlion/nginx:alpine \
+            "kjlion/nginx:build-${GITHUB_RUN_ID}-amd64" \
+            "kjlion/nginx:build-${GITHUB_RUN_ID}-arm64"
+          docker buildx imagetools inspect kjlion/nginx:alpine
