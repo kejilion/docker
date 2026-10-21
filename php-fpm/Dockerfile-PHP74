@@ -18,9 +18,13 @@ RUN apk update && apk add --no-cache \
     && curl -fsSL --retry 3 https://codeload.github.com/phpredis/phpredis/tar.gz/refs/tags/6.2.0 -o /tmp/redis.tgz \
     && echo '470333b27cbf9485d36b610b81300c06491a6575f22c6801a9cefc55285ed123  /tmp/redis.tgz' | sha256sum -c - \
     && tar -xzf /tmp/redis.tgz -C /tmp \
+    && curl -fsSL --retry 3 https://codeload.github.com/nemequ/liblzf/tar.gz/fb25820c3c0aeafd127956ae6c115063b47e459a -o /tmp/liblzf.tgz \
+    && echo '8e425b5bf7a569543e29cb4a16a913445d80c4efe83b371760ca798ca9b819ed  /tmp/liblzf.tgz' | sha256sum -c - \
+    && mkdir -p /tmp/phpredis-6.2.0/liblzf \
+    && tar -xzf /tmp/liblzf.tgz -C /tmp/phpredis-6.2.0/liblzf --strip-components=1 \
     && /usr/local/bin/install-php-extensions /tmp/imagick-3.8.1 mysqli pdo_mysql gd intl zip exif bcmath opcache /tmp/phpredis-6.2.0 soap SourceGuardian \
     && ( /usr/local/bin/install-php-extensions ioncube_loader || echo "⚠ ionCube 安装失败，已跳过" ) \
-    && rm -rf /tmp/imagick-3.8.1 /tmp/imagick.tgz /tmp/phpredis-6.2.0 /tmp/redis.tgz \
+    && rm -rf /tmp/imagick-3.8.1 /tmp/imagick.tgz /tmp/phpredis-6.2.0 /tmp/redis.tgz /tmp/liblzf.tgz \
     && apk del git autoconf gcc g++ make pkgconfig \
     && rm -rf /var/cache/apk/*
 
