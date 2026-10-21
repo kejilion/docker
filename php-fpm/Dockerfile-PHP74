@@ -12,14 +12,17 @@ RUN apk update && apk add --no-cache \
     git autoconf gcc g++ make pkgconfig \
     && curl -fsSL https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions -o /usr/local/bin/install-php-extensions \
     && chmod +x /usr/local/bin/install-php-extensions \
+    && curl -fsSL --retry 3 https://codeload.github.com/Imagick/imagick/tar.gz/refs/tags/3.8.1 -o /tmp/imagick.tgz \
+    && echo 'b0e9279ddf6e75a8c6b4068e16daec0475427dbca7ce2e144e30a51a88aa5ddc  /tmp/imagick.tgz' | sha256sum -c - \
+    && tar -xzf /tmp/imagick.tgz -C /tmp \
     && curl -fsSL --retry 3 https://pecl.php.net/get/redis-6.2.0.tgz -o /tmp/redis.tgz \
     && echo '5069c13dd22bd9e494bb246891052cb6cc0fc9a1b45c6a572a8be61773101363  /tmp/redis.tgz' | sha256sum -c - \
     && mkdir /tmp/redis-source \
     && tar -xzf /tmp/redis.tgz -C /tmp/redis-source \
     && mv /tmp/redis-source/package.xml /tmp/redis-source/redis-6.2.0/package.xml \
-    && /usr/local/bin/install-php-extensions imagick mysqli pdo_mysql gd intl zip exif bcmath opcache /tmp/redis-source/redis-6.2.0 soap SourceGuardian \
+    && /usr/local/bin/install-php-extensions /tmp/imagick-3.8.1 mysqli pdo_mysql gd intl zip exif bcmath opcache /tmp/redis-source/redis-6.2.0 soap SourceGuardian \
     && ( /usr/local/bin/install-php-extensions ioncube_loader || echo "⚠ ionCube 安装失败，已跳过" ) \
-    && rm -rf /tmp/redis-source /tmp/redis.tgz \
+    && rm -rf /tmp/imagick-3.8.1 /tmp/imagick.tgz /tmp/redis-source /tmp/redis.tgz \
     && apk del git autoconf gcc g++ make pkgconfig \
     && rm -rf /var/cache/apk/*
 
