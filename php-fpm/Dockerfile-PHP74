@@ -1,16 +1,34 @@
 FROM php:7.4-fpm-alpine
 
+# Use prepare-php74-security-build.py to build the official source backport first.
+RUN test "$PHP_SECURITY_BACKPORT" = 712e60f9edfd03f0960fc4fc3c2c375f42b90aa2 \
+    && php -r 'if (PHP_VERSION_ID !== 70433 || ini_get("max_multipart_body_parts") === false) { fwrite(STDERR, "The official PHP 7.4 security backport is required\n"); exit(1); }'
+
+LABEL io.kejilion.php.security-backport="712e60f9edfd03f0960fc4fc3c2c375f42b90aa2" \
+      io.kejilion.php.security-cves="CVE-2026-109618,CVE-2026-109619"
+
 RUN apk update && apk add --no-cache \
     imagemagick imagemagick-dev libgomp \
     git autoconf gcc g++ make pkgconfig \
     && curl -fsSL https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions -o /usr/local/bin/install-php-extensions \
     && chmod +x /usr/local/bin/install-php-extensions \
-    && /usr/local/bin/install-php-extensions imagick mysqli pdo_mysql gd intl zip exif bcmath opcache redis soap SourceGuardian \
+    && curl -fsSL --retry 3 https://codeload.github.com/Imagick/imagick/tar.gz/refs/tags/3.8.1 -o /tmp/imagick.tgz \
+    && echo 'b0e9279ddf6e75a8c6b4068e16daec0475427dbca7ce2e144e30a51a88aa5ddc  /tmp/imagick.tgz' | sha256sum -c - \
+    && tar -xzf /tmp/imagick.tgz -C /tmp \
+    && curl -fsSL --retry 3 https://codeload.github.com/phpredis/phpredis/tar.gz/refs/tags/6.2.0 -o /tmp/redis.tgz \
+    && echo '470333b27cbf9485d36b610b81300c06491a6575f22c6801a9cefc55285ed123  /tmp/redis.tgz' | sha256sum -c - \
+    && tar -xzf /tmp/redis.tgz -C /tmp \
+    && curl -fsSL --retry 3 https://codeload.github.com/nemequ/liblzf/tar.gz/fb25820c3c0aeafd127956ae6c115063b47e459a -o /tmp/liblzf.tgz \
+    && echo '8e425b5bf7a569543e29cb4a16a913445d80c4efe83b371760ca798ca9b819ed  /tmp/liblzf.tgz' | sha256sum -c - \
+    && mkdir -p /tmp/phpredis-6.2.0/liblzf \
+    && tar -xzf /tmp/liblzf.tgz -C /tmp/phpredis-6.2.0/liblzf --strip-components=1 \
+    && /usr/local/bin/install-php-extensions /tmp/imagick-3.8.1 mysqli pdo_mysql gd intl zip exif bcmath opcache /tmp/phpredis-6.2.0 soap SourceGuardian \
     && ( /usr/local/bin/install-php-extensions ioncube_loader || echo "⚠ ionCube 安装失败，已跳过" ) \
+    && rm -rf /tmp/imagick-3.8.1 /tmp/imagick.tgz /tmp/phpredis-6.2.0 /tmp/redis.tgz /tmp/liblzf.tgz \
     && apk del git autoconf gcc g++ make pkgconfig \
     && rm -rf /var/cache/apk/*
 
-RUN curl -sS https://getcomposer.org/installer -o composer-setup.php \
+RUN curl -fsSL https://getcomposer.org/installer -o composer-setup.php \
     && php composer-setup.php --install-dir=/usr/local/bin --filename=composer \
     && rm composer-setup.php
 
@@ -20,5 +38,5 @@ RUN echo "upload_max_filesize=100M" > /usr/local/etc/php/conf.d/uploads.ini \
     && echo "max_execution_time=1200" > /usr/local/etc/php/conf.d/max_execution_time.ini \
     && echo "max_input_time=600" > /usr/local/etc/php/conf.d/max_input_time.ini \
     && echo "max_input_vars=10000" > /usr/local/etc/php/conf.d/max_input_vars.ini \
-    && curl -o /usr/local/etc/php/conf.d/optimized_php.ini https://raw.githubusercontent.com/kejilion/sh/main/optimized_php.ini \
-    && curl -o /usr/local/etc/php-fpm.d/www.conf https://raw.githubusercontent.com/kejilion/sh/main/www-1.conf
+    && curl -fsSL -o /usr/local/etc/php/conf.d/optimized_php.ini https://raw.githubusercontent.com/kejilion/sh/main/optimized_php.ini \
+    && curl -fsSL -o /usr/local/etc/php-fpm.d/www.conf https://raw.githubusercontent.com/kejilion/sh/main/www-1.conf
