@@ -1,17 +1,158 @@
 name: Publish PHP Image
 
 on:
-  workflow_dispatch:   # 手动触发
+  workflow_dispatch:
+    inputs:
+      source_build:
+        description: Build patched PHP 8.5.12 from the pinned official source recipe
+        type: boolean
+        default: true
+      publish:
+        description: Publish verified images to Docker Hub
+        type: boolean
+        default: false
+      verified_run_id:
+        description: Reuse verified artifacts from a successful run of this exact commit
+        type: string
+        default: ''
   schedule:
-    - cron: '0 0 28 * *'  # 每个月的1号00:00（UTC时间）
+    - cron: '0 0 28 * *'  # 每月 28 日 00:00 UTC
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: php-build-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    if: inputs.verified_run_id == ''
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Prepare build context
+        id: context
+        env:
+          SOURCE_BUILD: ${{ inputs.source_build }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$SOURCE_BUILD" == true ]]; then
+            context="$RUNNER_TEMP/php-security-build"
+            python3 php-fpm/prepare-security-build.py "$context"
+            file="$context/Dockerfile"
+          else
+            context=.
+            file=php-fpm/Dockerfile
+          fi
+          echo "context=$context" >> "$GITHUB_OUTPUT"
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+
+      - name: Build PHP image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.context.outputs.context }}
+          file: ${{ steps.context.outputs.file }}
+          platforms: linux/${{ matrix.arch }}
+          pull: true
+          no-cache: true
+          load: true
+          push: false
+          tags: local/php:verified-${{ matrix.arch }}
+
+      - name: Verify PHP version, extensions and FPM configuration
+        env:
+          IMAGE: local/php:verified-${{ matrix.arch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint php "$IMAGE" -v
+          docker run --rm --entrypoint php "$IMAGE" -r '
+            if (PHP_VERSION_ID < 80512 || PHP_MAJOR_VERSION !== 8 || PHP_MINOR_VERSION !== 5) {
+              throw new RuntimeException("Patched PHP 8.5 is required");
+            }
+            foreach (["bcmath", "exif", "gd", "imagick", "intl", "mysqli", "pdo_mysql", "redis", "soap", "zip", "SourceGuardian"] as $extension) {
+              if (!extension_loaded($extension)) {
+                throw new RuntimeException("Missing extension: " . $extension);
+              }
+            }
+            if (!function_exists("opcache_get_status")) {
+              throw new RuntimeException("OPcache is missing");
+            }
+            echo "PHP version and required extensions verified\n";
+          '
+          docker run --rm --entrypoint php-fpm "$IMAGE" -t
+          docker run --rm --entrypoint composer "$IMAGE" --version
+          mkdir -p "$RUNNER_TEMP/php-artifact"
+          docker run --rm --entrypoint php "$IMAGE" -r 'echo PHP_VERSION;' > "$RUNNER_TEMP/php-artifact/version.txt"
+          docker run --rm --entrypoint php "$IMAGE" -m > "$RUNNER_TEMP/php-artifact/extensions.txt"
+          cp '${{ steps.context.outputs.file }}' "$RUNNER_TEMP/php-artifact/Dockerfile"
+          docker save "$IMAGE" -o "$RUNNER_TEMP/php-artifact/image.tar"
+          echo "### Verified PHP $(cat "$RUNNER_TEMP/php-artifact/version.txt") / ${{ matrix.arch }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Version, required extensions, Composer and FPM configuration passed. Image saved as a workflow artifact." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save verified image
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-verified-${{ matrix.arch }}
+          path: ${{ runner.temp }}/php-artifact/
+          retention-days: 3
+          compression-level: 1
+
+  publish:
+    if: >-
+      always() &&
+      (needs.build.result == 'success' || (needs.build.result == 'skipped' && inputs.verified_run_id != '')) &&
+      (github.event_name == 'schedule' || inputs.publish == true)
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate source run before reusing artifacts
+        if: inputs.verified_run_id != ''
+        uses: actions/github-script@v7
+        env:
+          VERIFIED_RUN_ID: ${{ inputs.verified_run_id }}
+        with:
+          script: |
+            if (!/^[0-9]+$/.test(process.env.VERIFIED_RUN_ID)) {
+              throw new Error('Invalid verified run ID');
+            }
+            const params = { owner: context.repo.owner, repo: context.repo.repo };
+            const source = (await github.rest.actions.getWorkflowRun({
+              ...params, run_id: Number(process.env.VERIFIED_RUN_ID)
+            })).data;
+            const current = (await github.rest.actions.getWorkflowRun({
+              ...params, run_id: context.runId
+            })).data;
+            if (source.conclusion !== 'success' || source.head_sha !== context.sha ||
+                source.workflow_id !== current.workflow_id ||
+                source.head_repository?.full_name !== `${context.repo.owner}/${context.repo.repo}`) {
+              throw new Error('Artifacts must come from a successful run of this workflow and exact commit');
+            }
+
+      - name: Download verified images
+        uses: actions/download-artifact@v4
+        with:
+          pattern: php-verified-*
+          path: images
+          run-id: ${{ inputs.verified_run_id || github.run_id }}
+          github-token: ${{ github.token }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -22,11 +163,21 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push PHP image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: php-fpm/Dockerfile
-          push: true
-          tags: kjlion/php:fpm-alpine
-          platforms: linux/amd64,linux/arm64
+      - name: Publish verified images and multi-platform manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(cat images/php-verified-amd64/version.txt)"
+          test "$version" = "$(cat images/php-verified-arm64/version.txt)"
+          [[ "$version" =~ ^8\.5\.[0-9]+$ ]]
+          for arch in amd64 arm64; do
+            docker load -i "images/php-verified-$arch/image.tar"
+            docker tag "local/php:verified-$arch" "kjlion/php:build-${GITHUB_RUN_ID}-$arch"
+            docker push "kjlion/php:build-${GITHUB_RUN_ID}-$arch"
+          done
+          docker buildx imagetools create \
+            -t "kjlion/php:${version}-fpm-alpine" \
+            -t kjlion/php:fpm-alpine \
+            "kjlion/php:build-${GITHUB_RUN_ID}-amd64" \
+            "kjlion/php:build-${GITHUB_RUN_ID}-arm64"
+          docker buildx imagetools inspect kjlion/php:fpm-alpine
