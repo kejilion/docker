@@ -1,15 +1,85 @@
 name: Publish PHP85 Image
 
 on:
-  workflow_dispatch:   # 手动触发
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the verified PHP85 profile
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: php85-build-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build patched PHP85 profile
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: php-fpm/Dockerfile-PHP85
+          platforms: linux/${{ matrix.arch }}
+          pull: true
+          no-cache: true
+          load: true
+          push: false
+          tags: local/php85:verified-${{ matrix.arch }}
+
+      - name: Verify version, extensions and session multipart recovery
+        env:
+          IMAGE: local/php85:verified-${{ matrix.arch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 php-fpm/verify-php-image.py "$IMAGE" --profile php85
+          mkdir -p "$RUNNER_TEMP/php85-artifact"
+          docker run --rm --entrypoint php "$IMAGE" -r 'echo PHP_VERSION;' > "$RUNNER_TEMP/php85-artifact/version.txt"
+          docker run --rm --entrypoint php "$IMAGE" -m > "$RUNNER_TEMP/php85-artifact/extensions.txt"
+          cp php-fpm/Dockerfile-PHP85 "$RUNNER_TEMP/php85-artifact/Dockerfile"
+          docker save "$IMAGE" -o "$RUNNER_TEMP/php85-artifact/image.tar"
+          echo "### Verified PHP85 profile / ${{ matrix.arch }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Patched version, required extensions, multipart OOM and FPM recovery passed." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save verified image
+        uses: actions/upload-artifact@v4
+        with:
+          name: php85-verified-${{ matrix.arch }}
+          path: ${{ runner.temp }}/php85-artifact/
+          retention-days: 3
+          compression-level: 1
+
+  publish:
+    if: inputs.publish == true
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download verified images
+        uses: actions/download-artifact@v4
+        with:
+          pattern: php85-verified-*
+          path: images
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -20,11 +90,24 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push PHP85 image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: php-fpm/Dockerfile-PHP85
-          push: true
-          tags: kjlion/php:8.5-fpm-alpine
-          platforms: linux/amd64,linux/arm64
+      - name: Publish verified PHP85 profile and preserve rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(cat images/php85-verified-amd64/version.txt)"
+          test "$version" = "$(cat images/php85-verified-arm64/version.txt)"
+          [[ "$version" =~ ^8\.5\.[0-9]+$ ]]
+          for arch in amd64 arm64; do
+            docker load -i "images/php85-verified-$arch/image.tar"
+            docker tag "local/php85:verified-$arch" "kjlion/php:8.5-build-${GITHUB_RUN_ID}-$arch"
+            docker push "kjlion/php:8.5-build-${GITHUB_RUN_ID}-$arch"
+          done
+          previous="$(docker buildx imagetools inspect kjlion/php:8.5-fpm-alpine --format '{{.Manifest.Digest}}')"
+          docker buildx imagetools create -t "kjlion/php:8.5-rollback-${GITHUB_RUN_ID}" "kjlion/php@$previous"
+          docker buildx imagetools create \
+            -t "kjlion/php:${version}-php85-fpm-alpine" \
+            -t kjlion/php:8.5-fpm-alpine \
+            "kjlion/php:8.5-build-${GITHUB_RUN_ID}-amd64" \
+            "kjlion/php:8.5-build-${GITHUB_RUN_ID}-arm64"
+          docker buildx imagetools inspect kjlion/php:8.5-fpm-alpine
+          echo "Previous PHP85 image digest: $previous" >> "$GITHUB_STEP_SUMMARY"

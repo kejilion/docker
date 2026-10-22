@@ -1,11 +1,24 @@
-FROM php:8.5-fpm-alpine
+FROM php:8.5-fpm-alpine3.23
+
+# CVE-2026-109618 / CVE-2026-109619: reject unpatched 8.5 releases.
+RUN php -r 'if (PHP_VERSION_ID < 80512 || PHP_MAJOR_VERSION !== 8 || PHP_MINOR_VERSION !== 5) { fwrite(STDERR, "Patched PHP 8.5.12 or newer is required\n"); exit(1); }'
+
+LABEL io.kejilion.php.security-cves="CVE-2026-109618,CVE-2026-109619"
 
 RUN apk update && apk add --no-cache \
     imagemagick imagemagick-dev libgomp \
     git autoconf gcc g++ make pkgconfig \
     && curl -fsSL https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions -o /usr/local/bin/install-php-extensions \
     && chmod +x /usr/local/bin/install-php-extensions \
-    && /usr/local/bin/install-php-extensions mysqli pdo_mysql gd intl zip exif bcmath opcache redis soap \
+    && curl -fsSL --retry 3 https://codeload.github.com/phpredis/phpredis/tar.gz/refs/tags/6.3.0 -o /tmp/redis.tgz \
+    && echo 'cb8f81df1a275599e4f8ddcfec7e1f65ed1953e6f5673649149fd680ebff4cad  /tmp/redis.tgz' | sha256sum -c - \
+    && tar -xzf /tmp/redis.tgz -C /tmp \
+    && curl -fsSL --retry 3 https://codeload.github.com/nemequ/liblzf/tar.gz/fb25820c3c0aeafd127956ae6c115063b47e459a -o /tmp/liblzf.tgz \
+    && echo '8e425b5bf7a569543e29cb4a16a913445d80c4efe83b371760ca798ca9b819ed  /tmp/liblzf.tgz' | sha256sum -c - \
+    && mkdir -p /tmp/phpredis-6.3.0/liblzf \
+    && tar -xzf /tmp/liblzf.tgz -C /tmp/phpredis-6.3.0/liblzf --strip-components=1 \
+    && /usr/local/bin/install-php-extensions mysqli pdo_mysql gd intl zip exif bcmath opcache /tmp/phpredis-6.3.0 soap \
+    && rm -rf /tmp/phpredis-6.3.0 /tmp/redis.tgz /tmp/liblzf.tgz \
     && apk del git autoconf gcc g++ make pkgconfig \
     && rm -rf /var/cache/apk/*
 
@@ -15,5 +28,5 @@ RUN echo "upload_max_filesize=50M" > /usr/local/etc/php/conf.d/uploads.ini \
     && echo "max_execution_time=1200" > /usr/local/etc/php/conf.d/max_execution_time.ini \
     && echo "max_input_time=600" > /usr/local/etc/php/conf.d/max_input_time.ini \
     && echo "max_input_vars=5000" > /usr/local/etc/php/conf.d/max_input_vars.ini \
-    && curl -o /usr/local/etc/php/conf.d/optimized_php.ini https://raw.githubusercontent.com/kejilion/sh/main/optimized_php.ini \
-    && curl -o /usr/local/etc/php-fpm.d/www.conf https://raw.githubusercontent.com/kejilion/sh/main/www-1.conf
+    && curl -fsSL -o /usr/local/etc/php/conf.d/optimized_php.ini https://raw.githubusercontent.com/kejilion/sh/main/optimized_php.ini \
+    && curl -fsSL -o /usr/local/etc/php-fpm.d/www.conf https://raw.githubusercontent.com/kejilion/sh/main/www-1.conf

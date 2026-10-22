@@ -1,0 +1,61 @@
+name: Check Published PHP Security
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'php-fpm/**'
+      - '.github/workflows/php*.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tag: fpm-alpine
+            profile: full
+            arch: amd64
+            runner: ubuntu-24.04
+          - tag: fpm-alpine
+            profile: full
+            arch: arm64
+            runner: ubuntu-24.04-arm
+          - tag: 7.4-fpm-alpine
+            profile: full
+            arch: amd64
+            runner: ubuntu-24.04
+          - tag: 7.4-fpm-alpine
+            profile: full
+            arch: arm64
+            runner: ubuntu-24.04-arm
+          - tag: 8.5-fpm-alpine
+            profile: php85
+            arch: amd64
+            runner: ubuntu-24.04
+          - tag: 8.5-fpm-alpine
+            profile: php85
+            arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Check the published image in isolated containers
+        env:
+          IMAGE: kjlion/php:${{ matrix.tag }}
+          PROFILE: ${{ matrix.profile }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$IMAGE"
+          digest="$(docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE")"
+          python3 php-fpm/verify-php-image.py "$digest" --profile "$PROFILE"
+          echo "### Verified $IMAGE / ${{ matrix.arch }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "$digest" >> "$GITHUB_STEP_SUMMARY"
+          echo "Patched version, required extensions, bounded session multipart OOM and FPM recovery passed." >> "$GITHUB_STEP_SUMMARY"
