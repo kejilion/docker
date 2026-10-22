@@ -65,7 +65,7 @@ def request(port, script, body=b"", allow_disconnect=False):
                 body = receive(size)
                 if padding:
                     receive(padding)
-                if kind == 6:
+                if kind in (6, 7):
                     output += body
                 elif kind == 3:
                     return output
@@ -76,15 +76,17 @@ def request(port, script, body=b"", allow_disconnect=False):
 
 
 def ready(port, version):
+    last = b""
     for _ in range(60):
         try:
             output = request(port, "ready.php")
+            last = output[-2048:]
             if f"READY:{version}".encode() in output:
                 return
-        except (OSError, EOFError):
-            pass
+        except (OSError, EOFError) as error:
+            last = str(error).encode()
         time.sleep(0.5)
-    raise RuntimeError("FPM did not become ready or recover")
+    raise RuntimeError(f"FPM did not become ready or recover: {last!r}")
 
 
 def multipart(value):
@@ -150,7 +152,7 @@ def verify(image, profile):
         (root / "oom.php").write_text("<?php ini_set('memory_limit', '8M');" + oom_code)
         # Test-only settings deliberately enable the session parsing entry point.
         (root / "pool.conf").write_text(
-            "[www]\npm=static\npm.max_children=1\n"
+            "[www]\nlisten=0.0.0.0:9000\npm=static\npm.max_children=1\n"
             "php_admin_value[memory_limit]=16M\n"
             "php_admin_value[post_max_size]=32M\n"
             "php_admin_value[upload_max_filesize]=1M\n"
