@@ -76,36 +76,20 @@ jobs:
           push: false
           tags: local/php:verified-${{ matrix.arch }}
 
-      - name: Verify PHP version, extensions and FPM configuration
+      - name: Verify patched PHP, extensions and session multipart recovery
         env:
           IMAGE: local/php:verified-${{ matrix.arch }}
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm --entrypoint php "$IMAGE" -v
-          docker run --rm --entrypoint php "$IMAGE" -r '
-            if (PHP_VERSION_ID < 80512 || PHP_MAJOR_VERSION !== 8 || PHP_MINOR_VERSION !== 5) {
-              throw new RuntimeException("Patched PHP 8.5 is required");
-            }
-            foreach (["bcmath", "exif", "gd", "imagick", "intl", "mysqli", "pdo_mysql", "redis", "soap", "zip", "SourceGuardian"] as $extension) {
-              if (!extension_loaded($extension)) {
-                throw new RuntimeException("Missing extension: " . $extension);
-              }
-            }
-            if (!function_exists("opcache_get_status")) {
-              throw new RuntimeException("OPcache is missing");
-            }
-            echo "PHP version and required extensions verified\n";
-          '
-          docker run --rm --entrypoint php-fpm "$IMAGE" -t
-          docker run --rm --entrypoint composer "$IMAGE" --version
+          python3 php-fpm/verify-php-image.py "$IMAGE"
           mkdir -p "$RUNNER_TEMP/php-artifact"
           docker run --rm --entrypoint php "$IMAGE" -r 'echo PHP_VERSION;' > "$RUNNER_TEMP/php-artifact/version.txt"
           docker run --rm --entrypoint php "$IMAGE" -m > "$RUNNER_TEMP/php-artifact/extensions.txt"
           cp '${{ steps.context.outputs.file }}' "$RUNNER_TEMP/php-artifact/Dockerfile"
           docker save "$IMAGE" -o "$RUNNER_TEMP/php-artifact/image.tar"
           echo "### Verified PHP $(cat "$RUNNER_TEMP/php-artifact/version.txt") / ${{ matrix.arch }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Version, required extensions, Composer and FPM configuration passed. Image saved as a workflow artifact." >> "$GITHUB_STEP_SUMMARY"
+          echo "Version, required extensions, Composer, session multipart OOM and FPM recovery passed. Image saved as a workflow artifact." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Save verified image
         uses: actions/upload-artifact@v4

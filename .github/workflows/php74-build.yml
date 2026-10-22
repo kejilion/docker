@@ -56,7 +56,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 php-fpm/verify-php74-image.py "$IMAGE"
+          python3 php-fpm/verify-php-image.py "$IMAGE"
           mkdir -p "$RUNNER_TEMP/php74-artifact"
           docker run --rm --entrypoint php "$IMAGE" -r 'echo PHP_VERSION;' > "$RUNNER_TEMP/php74-artifact/version.txt"
           docker run --rm --entrypoint php "$IMAGE" -r 'echo getenv("PHP_SECURITY_BACKPORT");' > "$RUNNER_TEMP/php74-artifact/backport.txt"
@@ -65,7 +65,7 @@ jobs:
           cp "$RUNNER_TEMP/php74-build/Dockerfile" "$RUNNER_TEMP/php74-artifact/Dockerfile"
           docker save "$IMAGE" -o "$RUNNER_TEMP/php74-artifact/image.tar"
           echo "### Verified PHP 7.4.33 with official security backport / ${{ matrix.arch }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Extensions, Composer, direct OOM exit and FPM recovery passed. PHP 7.4 remains EOL." >> "$GITHUB_STEP_SUMMARY"
+          echo "Extensions, Composer, direct OOM exit, session multipart parsing and FPM recovery passed. PHP 7.4 remains EOL." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Save verified image
         uses: actions/upload-artifact@v4
