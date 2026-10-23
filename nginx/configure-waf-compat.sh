@@ -22,6 +22,8 @@ sed -i '/^SecRule &ARGS[[:space:]]/s/@ge [0-9][0-9]*/@ge 2048/' "$config"
 
 # The shared policy has its own site-scoped controls. This compatible image
 # default permits standard REST methods and leaves every CRS attack rule active.
+# Early blocking retains the installed score thresholds. DetectionOnly still
+# inspects subsequent phases; blocked traffic records fewer matching body rules.
 cat > /etc/nginx/modsec/plugins/ldnmp-compat-config.conf <<'EOF'
-SecAction "id:100001110,phase:1,pass,nolog,t:none,setvar:'tx.allowed_methods=GET HEAD POST OPTIONS PUT PATCH DELETE'"
+SecAction "id:100001110,phase:1,pass,nolog,t:none,setvar:'tx.allowed_methods=GET HEAD POST OPTIONS PUT PATCH DELETE',setvar:tx.early_blocking=1"
 EOF
