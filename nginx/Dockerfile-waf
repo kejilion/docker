@@ -102,6 +102,10 @@ RUN mkdir -p /etc/nginx/modsec/plugins \
     && wget https://raw.githubusercontent.com/owasp-modsecurity/ModSecurity/v${MODSECURITY_VERSION}/unicode.mapping -O /etc/nginx/modsec/unicode.mapping \
     && rm -rf /var/cache/apk/*
 
+COPY nginx/configure-waf-compat.sh /usr/local/libexec/configure-waf-compat.sh
+RUN sh /usr/local/libexec/configure-waf-compat.sh \
+    && rm /usr/local/libexec/configure-waf-compat.sh
+
 # Load the WAF rules before publishing, so incompatible engines/configs fail the build.
 RUN printf '%s\n' \
         'load_module /etc/nginx/modules/ngx_http_modsecurity_module.so;' \

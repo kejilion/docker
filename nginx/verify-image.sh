@@ -51,3 +51,4 @@ if [[ "$status" != 403 ]]; then
   exit 1
 fi
 echo "NGINX $expected_version: all modules, configuration, HTTP and WAF checks passed"
+python3 "$(dirname "$0")/verify-waf-compat.py" --image "$image"
