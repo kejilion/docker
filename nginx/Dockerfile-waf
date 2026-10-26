@@ -23,8 +23,13 @@ RUN git init ngx_brotli \
     && git checkout --detach FETCH_HEAD \
     && git submodule update --init --recursive --depth 1
 
-RUN git clone --depth 1 -b v${MODSECURITY_VERSION} https://github.com/owasp-modsecurity/ModSecurity.git \
+COPY nginx/patches/modsecurity-target-match-order.patch /usr/src/modsecurity-target-match-order.patch
+RUN test "${MODSECURITY_VERSION}" = "3.0.17" \
+    && git clone --depth 1 -b v${MODSECURITY_VERSION} https://github.com/owasp-modsecurity/ModSecurity.git \
     && cd ModSecurity \
+    && test "$(git rev-parse HEAD)" = "1925753989ccce977cdaae417b55c9726c7cf02c" \
+    && git apply --check /usr/src/modsecurity-target-match-order.patch \
+    && git apply /usr/src/modsecurity-target-match-order.patch \
     && git submodule update --init --recursive \
     && ./build.sh \
     && ./configure CXXFLAGS="-include cstdint" \
