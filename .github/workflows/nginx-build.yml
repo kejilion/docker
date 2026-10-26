@@ -126,6 +126,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Verify optional optimization does not block upstream upgrades
+        run: sh nginx/test-modsecurity-optimization.sh
+
       - name: Build NGINX image
         uses: docker/build-push-action@v7
         with:
@@ -159,10 +162,13 @@ jobs:
           bash nginx/verify-image.sh "$IMAGE" "$NGINX_VERSION"
           mkdir -p "$RUNNER_TEMP/nginx-artifact"
           printf '%s' "$NGINX_VERSION" > "$RUNNER_TEMP/nginx-artifact/version.txt"
-          printf '%s\n' "$COMPONENTS" > "$RUNNER_TEMP/nginx-artifact/components.json"
+          optimization="$(docker run --rm --network none --entrypoint cat "$IMAGE" /usr/share/doc/kejilion-waf/modsecurity-optimization.json)"
+          printf '%s\n' "$COMPONENTS" | jq --argjson optimization "$optimization" \
+            '. + {modsecurity_target_optimization: $optimization}' > "$RUNNER_TEMP/nginx-artifact/components.json"
           docker save "$IMAGE" -o "$RUNNER_TEMP/nginx-artifact/image.tar"
           echo "### Verified NGINX $NGINX_VERSION / ${{ matrix.arch }}" >> "$GITHUB_STEP_SUMMARY"
           echo "All modules, configuration, HTTP and WAF checks passed." >> "$GITHUB_STEP_SUMMARY"
+          echo "Optional target matching optimization: $optimization" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Save verified image
         uses: actions/upload-artifact@v4

@@ -24,12 +24,11 @@ RUN git init ngx_brotli \
     && git submodule update --init --recursive --depth 1
 
 COPY nginx/patches/modsecurity-target-match-order.patch /usr/src/modsecurity-target-match-order.patch
-RUN test "${MODSECURITY_VERSION}" = "3.0.17" \
-    && git clone --depth 1 -b v${MODSECURITY_VERSION} https://github.com/owasp-modsecurity/ModSecurity.git \
+COPY nginx/apply-modsecurity-optimization.sh /usr/src/apply-modsecurity-optimization.sh
+RUN git clone --depth 1 -b v${MODSECURITY_VERSION} https://github.com/owasp-modsecurity/ModSecurity.git \
     && cd ModSecurity \
-    && test "$(git rev-parse HEAD)" = "1925753989ccce977cdaae417b55c9726c7cf02c" \
-    && git apply --check /usr/src/modsecurity-target-match-order.patch \
-    && git apply /usr/src/modsecurity-target-match-order.patch \
+    && sh /usr/src/apply-modsecurity-optimization.sh "${MODSECURITY_VERSION}" \
+        /usr/src/modsecurity-target-match-order.patch /usr/src/modsecurity-optimization.json \
     && git submodule update --init --recursive \
     && ./build.sh \
     && ./configure CXXFLAGS="-include cstdint" \
@@ -76,6 +75,7 @@ ARG WORDPRESS_PLUGIN_REF LDNMP_RULES_REF
 # 复制压缩模块和 ModSecurity
 COPY --from=builder /usr/src/nginx-${NGINX_VERSION}/objs/*.so /etc/nginx/modules/
 COPY --from=builder /usr/local/modsecurity/lib/* /usr/lib/
+COPY --from=builder /usr/src/modsecurity-optimization.json /usr/share/doc/kejilion-waf/modsecurity-optimization.json
 
 # 创建配置目录并下载必要文件
 RUN mkdir -p /etc/nginx/modsec/plugins \
