@@ -72,8 +72,7 @@ jobs:
           MODSECURITY_VERSION="$(normalize_version "$(latest_release_tag owasp-modsecurity/ModSecurity)")"
           MODSECURITY_NGINX_VERSION="$(normalize_version "$(latest_release_tag owasp-modsecurity/ModSecurity-nginx)")"
           ZSTD_VERSION="$(normalize_version "$(latest_release_tag facebook/zstd)")"
-          # Keep encoded-path protection until CRS 4.31 passes the managed WAF regression suite.
-          CORERULESET_VERSION="4.30.0"
+          CORERULESET_VERSION="$(normalize_version "$(latest_release_tag coreruleset/coreruleset)")"
           NGX_BROTLI_REF="$(latest_default_branch_sha google/ngx_brotli)"
           ZSTD_NGINX_MODULE_REF="$(latest_default_branch_sha tokers/zstd-nginx-module)"
           WORDPRESS_PLUGIN_REF="$(latest_default_branch_sha coreruleset/wordpress-rule-exclusions-plugin)"
@@ -152,15 +151,28 @@ jobs:
             WORDPRESS_PLUGIN_REF=${{ needs.resolve.outputs.wordpress_plugin_ref }}
             LDNMP_RULES_REF=${{ needs.resolve.outputs.ldnmp_rules_ref }}
 
+      - name: Check out the exact shared WAF policy used by the image
+        uses: actions/checkout@v4
+        with:
+          repository: kejilion/nginx
+          ref: ${{ needs.resolve.outputs.ldnmp_rules_ref }}
+          path: shared-nginx
+          persist-credentials: false
+
       - name: Verify NGINX modules, HTTP and WAF
         env:
           IMAGE: local/nginx:verified-${{ matrix.arch }}
           NGINX_VERSION: ${{ needs.resolve.outputs.nginx_version }}
+          CORERULESET_VERSION: ${{ needs.resolve.outputs.coreruleset_version }}
           COMPONENTS: ${{ toJSON(needs.resolve.outputs) }}
         shell: bash
         run: |
           set -euo pipefail
           bash nginx/verify-image.sh "$IMAGE" "$NGINX_VERSION"
+          docker run --rm --network none --entrypoint cat "$IMAGE" /etc/nginx/modsec/rules/REQUEST-901-INITIALIZATION.conf \
+            | grep -Fx "# OWASP CRS ver.${CORERULESET_VERSION}"
+          waf_workspace="$(mktemp -d "$RUNNER_TEMP/waf.XXXXXX")"
+          python3 -B shared-nginx/waf/tests/integration.py --image "$IMAGE" --work-dir "$waf_workspace/suite" | tail -n 1
           mkdir -p "$RUNNER_TEMP/nginx-artifact"
           printf '%s' "$NGINX_VERSION" > "$RUNNER_TEMP/nginx-artifact/version.txt"
           optimization="$(docker run --rm --network none --entrypoint cat "$IMAGE" /usr/share/doc/kejilion-waf/modsecurity-optimization.json)"

@@ -37,7 +37,7 @@ class Backend(http.server.BaseHTTPRequestHandler):
         self.send_response(200);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(data)));self.send_header('Connection','close');self.end_headers()
         if self.command!='HEAD':self.wfile.write(data)
         self.close_connection=True
-    do_GET=do_HEAD=do_POST=do_OPTIONS=do_PUT=do_PATCH=do_DELETE=respond
+    do_GET=do_HEAD=do_POST=do_OPTIONS=do_PUT=do_PATCH=do_DELETE=do_PROPFIND=respond
 
 
 class UnixHTTP(socketserver.ThreadingMixIn,socketserver.UnixStreamServer):
@@ -70,16 +70,26 @@ http {
     map $http_upgrade $fixture_upgrade { default upgrade; '' close; }
     upstream fixture { server unix:/test/backend.sock; }
 '''
-    for host,settings in [('direct.example',''),('legacy.example',''),('cf.example','set_real_ip_from unix:; real_ip_header CF-Connecting-IP; real_ip_recursive off;'),('off.example','modsecurity off;')]:
+    for host,settings in [('direct.example',''),('legacy.example',''),('mixed.example',''),('cf.example','set_real_ip_from unix:; real_ip_header CF-Connecting-IP; real_ip_recursive off;'),('off.example','modsecurity off;')]:
         text+='server { listen unix:/test/front.sock; server_name '+host+'; '+settings+proxy+' }\n'
     text+='server { listen 127.0.0.1:18080; server_name direct.example; '+proxy+' }\n}\n'
     (work/'nginx.conf').write_text(text,encoding='utf-8')
-    (work/'legacy-methods.conf').write_text(
-        """SecRule REQUEST_HEADERS:Host "@streq legacy.example" "id:100000011,phase:1,pass,nolog,t:none,setvar:tx.inbound_anomaly_score_threshold=5,setvar:'tx.allowed_methods=GET HEAD POST OPTIONS PUT PATCH DELETE'"\n""",
+    (work/'legacy-allowlists.conf').write_text(
+        """SecRule REQUEST_HEADERS:Host "@streq legacy.example" "id:100000011,phase:1,pass,nolog,t:none,setvar:tx.inbound_anomaly_score_threshold=5,setvar:'tx.allowed_methods=GET HEAD PROPFIND',setvar:'tx.allowed_http_versions=HTTP/1.1'"\n"""
+        """SecRule REQUEST_HEADERS:Host "@streq mixed.example" "id:100000012,phase:1,pass,nolog,t:none,setvar:tx.inbound_anomaly_score_threshold=5,setvar:'tx.allowed_methods=GET HEAD PATCHING',setvar:'tx.plugin_allowed_methods_100000012=|DELETE|',setvar:'tx.allowed_http_versions=HTTP/1.0 |HTTP/1.1|'"\n""",
         encoding='utf-8')
+    (work/'legacy-phase2.conf').write_text(
+        '''SecRule REQUEST_HEADERS:Host "@streq legacy.example" "id:100000013,phase:2,deny,status:403,log,t:none,chain"
+    SecRule TX:allowed_methods "!@streq GET HEAD PROPFIND" "t:none"
+SecRule REQUEST_HEADERS:Host "@streq legacy.example" "id:100000014,phase:2,deny,status:403,log,t:none,chain"
+    SecRule TX:allowed_http_versions "!@streq HTTP/1.1" "t:none"
+''', encoding='utf-8')
     name='waf-image-compat-'+uuid.uuid4().hex[:10];results=[]
-    def request(host='direct.example',path='/',method='GET',body=None,headers=None,expected=200,label=None):
+    def request(host='direct.example',path='/',method='GET',body=None,headers=None,expected=200,label=None,http10=False):
         connection=http.client.HTTPConnection('localhost',timeout=15)
+        if http10:
+            connection._http_vsn=10
+            connection._http_vsn_str='HTTP/1.0'
         def connect():
             connection.sock=socket.socket(socket.AF_UNIX);connection.sock.settimeout(15);connection.sock.connect(str(work/'front.sock'))
         connection.connect=connect
@@ -92,7 +102,8 @@ http {
         run('docker','run','-d','--pull=never','--name',name,'--network=none','--read-only','--memory=768m','--cpus=1','--pids-limit=64',
             '--tmpfs','/tmp:rw,nosuid,size=64m','--tmpfs','/run:rw,nosuid,size=8m','--tmpfs','/var/cache/nginx:rw,nosuid,size=128m',
             '--mount',f'type=bind,src={work},dst=/test','--mount',f'type=bind,src={logs},dst=/var/log/nginx',
-            '--mount',f'type=bind,src={work}/legacy-methods.conf,dst=/etc/nginx/modsec/plugins/legacy-methods-config.conf,readonly',
+            '--mount',f'type=bind,src={work}/legacy-allowlists.conf,dst=/etc/nginx/modsec/plugins/00-legacy-allowlists-config.conf,readonly',
+            '--mount',f'type=bind,src={work}/legacy-phase2.conf,dst=/etc/nginx/modsec/plugins/legacy-allowlists-after.conf,readonly',
             '--mount',f'type=bind,src={work}/nginx.conf,dst=/etc/nginx/nginx.conf,readonly','--entrypoint','nginx',args.image,'-g','daemon off;')
         for _ in range(100):
             if (work/'front.sock').exists():break
@@ -101,7 +112,13 @@ http {
         for host in ['direct.example','cf.example']:
             for method in ['GET','HEAD','POST','OPTIONS','PUT','PATCH','DELETE']:request(host=host,method=method,label=host+' REST '+method)
         request(host='legacy.example',path='/api/v1/health',label='legacy WAF methods permit health GET')
+        request(host='legacy.example',method='PROPFIND',label='legacy WAF keeps custom allowed method')
+        request(host='legacy.example',method='POST',expected=403,label='legacy WAF keeps a narrow allowlist')
         request(host='legacy.example',method='PURGE',expected=403,label='legacy WAF methods still reject PURGE')
+        request(host='legacy.example',http10=True,expected=403,label='legacy WAF rejects a version outside the allowlist')
+        request(host='mixed.example',http10=True,label='mixed protocol allowlist keeps its legacy entry')
+        request(host='mixed.example',method='DELETE',label='legacy allowlist keeps the native plugin addition')
+        request(host='mixed.example',method='PATCH',expected=403,label='allowed methods still require whole tokens')
         request(method='POST',body=json.dumps({'text':'a'*(1024*1024)}),headers={'Content-Type':'application/json'},label='1MiB JSON headroom')
         request(method='POST',body=urllib.parse.urlencode({'p'+str(i):'x' for i in range(1500)}),headers={'Content-Type':'application/x-www-form-urlencoded'},label='1500 valid arguments')
         request(method='POST',body=urllib.parse.urlencode({'p'+str(i):'x' for i in range(2050)}),headers={'Content-Type':'application/x-www-form-urlencoded'},expected=400,label='argument budget rejects')
