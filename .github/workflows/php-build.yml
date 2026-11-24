@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       source_build:
-        description: Build patched PHP 8.5.12 from the pinned official source recipe
+        description: Reproduce the historical PHP 8.5.12 source build instead of using the official rolling base
         type: boolean
-        default: true
+        default: false
       publish:
         description: Publish verified images to Docker Hub
         type: boolean
