@@ -25,5 +25,12 @@ sed -i '/^SecRule &ARGS[[:space:]]/s/@ge [0-9][0-9]*/@ge 2048/' "$config"
 # Early blocking retains the installed score thresholds. DetectionOnly still
 # inspects subsequent phases; blocked traffic records fewer matching body rules.
 cat > /etc/nginx/modsec/plugins/ldnmp-compat-config.conf <<'EOF'
-SecAction "id:100001110,phase:1,pass,nolog,t:none,setvar:'tx.allowed_methods=GET HEAD POST OPTIONS PUT PATCH DELETE',setvar:tx.early_blocking=1"
+SecAction "id:100001110,phase:1,pass,nolog,t:none,setvar:'tx.allowed_methods=|GET| |HEAD| |POST| |OPTIONS| |PUT| |PATCH| |DELETE|',setvar:tx.early_blocking=1"
+EOF
+
+# Older host policies still write this exact list before including the CRS rules.
+# Normalize it before CRS 911100 without changing administrator-defined lists.
+cat > /etc/nginx/modsec/rules/REQUEST-910-KEJILION-COMPAT.conf <<'EOF'
+SecRule TX:allowed_methods "@streq GET HEAD POST OPTIONS PUT PATCH DELETE" \
+    "id:100001111,phase:1,pass,nolog,t:none,setvar:'tx.allowed_methods=|GET| |HEAD| |POST| |OPTIONS| |PUT| |PATCH| |DELETE|'"
 EOF

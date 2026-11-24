@@ -70,10 +70,13 @@ http {
     map $http_upgrade $fixture_upgrade { default upgrade; '' close; }
     upstream fixture { server unix:/test/backend.sock; }
 '''
-    for host,settings in [('direct.example',''),('cf.example','set_real_ip_from unix:; real_ip_header CF-Connecting-IP; real_ip_recursive off;'),('off.example','modsecurity off;')]:
+    for host,settings in [('direct.example',''),('legacy.example',''),('cf.example','set_real_ip_from unix:; real_ip_header CF-Connecting-IP; real_ip_recursive off;'),('off.example','modsecurity off;')]:
         text+='server { listen unix:/test/front.sock; server_name '+host+'; '+settings+proxy+' }\n'
     text+='server { listen 127.0.0.1:18080; server_name direct.example; '+proxy+' }\n}\n'
     (work/'nginx.conf').write_text(text,encoding='utf-8')
+    (work/'legacy-methods.conf').write_text(
+        """SecRule REQUEST_HEADERS:Host "@streq legacy.example" "id:100000011,phase:1,pass,nolog,t:none,setvar:tx.inbound_anomaly_score_threshold=5,setvar:'tx.allowed_methods=GET HEAD POST OPTIONS PUT PATCH DELETE'"\n""",
+        encoding='utf-8')
     name='waf-image-compat-'+uuid.uuid4().hex[:10];results=[]
     def request(host='direct.example',path='/',method='GET',body=None,headers=None,expected=200,label=None):
         connection=http.client.HTTPConnection('localhost',timeout=15)
@@ -89,6 +92,7 @@ http {
         run('docker','run','-d','--pull=never','--name',name,'--network=none','--read-only','--memory=768m','--cpus=1','--pids-limit=64',
             '--tmpfs','/tmp:rw,nosuid,size=64m','--tmpfs','/run:rw,nosuid,size=8m','--tmpfs','/var/cache/nginx:rw,nosuid,size=128m',
             '--mount',f'type=bind,src={work},dst=/test','--mount',f'type=bind,src={logs},dst=/var/log/nginx',
+            '--mount',f'type=bind,src={work}/legacy-methods.conf,dst=/etc/nginx/modsec/plugins/legacy-methods-config.conf,readonly',
             '--mount',f'type=bind,src={work}/nginx.conf,dst=/etc/nginx/nginx.conf,readonly','--entrypoint','nginx',args.image,'-g','daemon off;')
         for _ in range(100):
             if (work/'front.sock').exists():break
@@ -96,6 +100,8 @@ http {
         run('docker','exec',name,'nginx','-t')
         for host in ['direct.example','cf.example']:
             for method in ['GET','HEAD','POST','OPTIONS','PUT','PATCH','DELETE']:request(host=host,method=method,label=host+' REST '+method)
+        request(host='legacy.example',path='/api/v1/health',label='legacy WAF methods permit health GET')
+        request(host='legacy.example',method='PURGE',expected=403,label='legacy WAF methods still reject PURGE')
         request(method='POST',body=json.dumps({'text':'a'*(1024*1024)}),headers={'Content-Type':'application/json'},label='1MiB JSON headroom')
         request(method='POST',body=urllib.parse.urlencode({'p'+str(i):'x' for i in range(1500)}),headers={'Content-Type':'application/x-www-form-urlencoded'},label='1500 valid arguments')
         request(method='POST',body=urllib.parse.urlencode({'p'+str(i):'x' for i in range(2050)}),headers={'Content-Type':'application/x-www-form-urlencoded'},expected=400,label='argument budget rejects')
